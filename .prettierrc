@@ -1,0 +1,8 @@
+{
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "importOrder": ["^react", "^(react$|store)", "^next", "^(@emotion|styles|rebass|phosphor)", "^utils|config|lodash", "^api", "^components", "generated|assets|public", "pages", "^(./|../)", "^(?!../|./)"],
+  "semi": true,
+  "importOrderSeparation": true
+}
