@@ -77,7 +77,7 @@ const ShoppingList = () => {
                     </Flex>
                     <Flex flexDirection="column">
                         <h4>Dodaj artykuł do listy: </h4>
-                        <Input autoFocus={true} type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)}/>
+                        <Input onKeyDown={(e) => e.key === "Enter" ? addItem() : null} autoFocus={true} type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)}/>
                         <Flex justifyContent="flex-end" mt={2}>
                             <Button style={{backgroundColor: 'grey', marginRight: 4}} onClick={closeModal}>Wróć</Button>
                             <Button onClick={addItem}>+ Dodaj</Button>
@@ -95,13 +95,13 @@ const ShoppingList = () => {
                                 const isInCart = item.status === Status.IN_CART;
 
                                 return (
-                                    <ListItem key={item.id + '_item'} mb={2} justifyContent="space-between" alignItems="center" inCart={isInCart}>
+                                    <ListItem key={item.id + '_item'} mb={2} justifyContent="space-between" alignItems="center" inCart={isInCart} onClick={() => changeItemStatus(item.id, isInCart ? Status.IN_HISTORY : Status.IN_CART)}>
                                         <ItemName flex={5} inCart={isInCart} >{item.name}</ItemName>
                                         <Flex flex={1} justifyContent="flex-end" style={{color: 'deeppink'}}>
                                             {item.status === Status.IN_CART ? (
                                                 <RemoveButton ml={2} onClick={() => changeItemStatus(item.id, Status.IN_HISTORY)} justifyContent="center" alignItems="center">x</RemoveButton>
                                             ) : (
-                                                <Cart onClick={() => changeItemStatus(item.id, Status.IN_CART)} width={20} height={20} />
+                                                <Cart width={20} height={20} />
                                             )}
                                         </Flex>
                                     </ListItem>
@@ -109,7 +109,9 @@ const ShoppingList = () => {
                             })}
                         </List>
                     )}
-                    <Button onClick={() => setShowModal(true)}>+ Dodaj produkt</Button>
+                    <Flex mb={4} width="100%">
+                        <Button onClick={() => setShowModal(true)} style={{width: '100%'}}>+ Dodaj produkt</Button>
+                    </Flex>
                 </Flex>
             )}
         </Wrapper>
@@ -146,11 +148,12 @@ const Modal = styled(Flex)`
 
 const Input = styled.input`
   height: 40px;
-  font-size: 18px;
-  border-radius: 3px;
+  font-size: 20px;
+  border: none;
   padding: 6px 12px;
   outline: none;
   border-width: 1px;
+  border-bottom: 1px solid black;
 `;
 
 const ItemName = styled(Flex)<{inCart?: boolean}>`
@@ -162,13 +165,14 @@ const ItemName = styled(Flex)<{inCart?: boolean}>`
 const Button = styled.button`
   background-color: var(--color-deeppink);
   font-weight: bold;
-  height: 36px;
+  height: 46px;
   border-radius: 6px;
   padding: 6px 12px;
   outline: none;
   border: none;
   cursor: pointer;
   color: white;
+  font-size: 18px;
 `;
 
 const RemoveButton = styled(Flex)`
