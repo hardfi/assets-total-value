@@ -4,18 +4,8 @@ import styled from 'styled-components';
 import { ReactComponent as Cart } from '../assets/shopping-cart.svg';
 import {getFromLocalStorage, LocalStorageKeys, saveToLocalStorage } from '../utils/functions';
 import Background from '../assets/bckg.jpeg';
-
-type Item = {
-    name: string;
-    id: number;
-    status: Status;
-}
-
-enum Status {
-    IN_LIST,
-    IN_CART,
-    IN_HISTORY
-}
+import supabaseApi from '../api/supabaseApi';
+import { Item, ItemForm, Optional, Status } from '../api/typings';
 
 const ShoppingList = () => {
     const [list, setList] = useState<Item[]>([]);
@@ -25,21 +15,39 @@ const ShoppingList = () => {
     const noItems = !list.length;
 
     useEffect(() => {
-        const savedList: Item[] = getFromLocalStorage(LocalStorageKeys.SHOPPING_LIST);
-        if (savedList) {
-            setList(savedList);
-        }
+        getShoppingList();
     }, []);
 
-    useEffect(() => {
-        saveToLocalStorage(JSON.stringify(list), LocalStorageKeys.SHOPPING_LIST)
-    }, [list]);
+    const getShoppingList = () => {
+        supabaseApi.getAllItems().then(res => {
+            if (res.data) {
+                setList(res.data);
+            }
+        });
+    }
 
     const addItem = () => {
         if (newItem) {
-            setList(returnSortedList([...list, {name: newItem, id: Date.now(), status: Status.IN_LIST}]));
-            setNewItem('');
-            setShowModal(false);
+            const item: ItemForm = {name: newItem, status: Status.IN_LIST}
+            supabaseApi.createNewItem(item).then(res => {
+                if (res.data) {
+                    setNewItem('');
+                    setShowModal(false);
+                    getShoppingList();
+                }
+            })
+        }
+    }
+
+    const changeItemStatus = (itemId: string, status: Status) => {
+        const _list = [...list];
+        const itemToChange = _list.find(item => item.uuid === itemId);
+        if (itemToChange) {
+            supabaseApi.updateItemStatus(itemToChange.uuid, status).then(res => {
+                if (res.data) {
+                    getShoppingList();
+                }
+            })
         }
     }
 
@@ -52,15 +60,6 @@ const ShoppingList = () => {
         setNewItem('');
     }
 
-    const changeItemStatus = (itemId: number, status: Status) => {
-        const _list = [...list];
-        const itemToChange = _list.find(item => item.id === itemId);
-        if (itemToChange) {
-            itemToChange.status = status;
-        }
-        setList(returnSortedList(_list));
-    }
-
     return (
         <Wrapper alignItems="center" flexDirection="column" flex={1} height="100vh">
             {showModal ? (
@@ -69,7 +68,7 @@ const ShoppingList = () => {
                         <h4>Ostatnio dodawane:</h4>
                         <Flex flexWrap="wrap">
                             {list.filter(item => item.status === Status.IN_HISTORY).map(item => (
-                                <SmallItem key={item.id} onClick={() => changeItemStatus(item.id, Status.IN_LIST)}>
+                                <SmallItem key={item.uuid} onClick={() => changeItemStatus(item.uuid, Status.IN_LIST)}>
                                     <Box>{item.name}</Box>
                                 </SmallItem>
                             ))}
@@ -95,11 +94,11 @@ const ShoppingList = () => {
                                 const isInCart = item.status === Status.IN_CART;
 
                                 return (
-                                    <ListItem key={item.id + '_item'} mb={2} justifyContent="space-between" alignItems="center" inCart={isInCart} onClick={() => changeItemStatus(item.id, isInCart ? Status.IN_HISTORY : Status.IN_CART)}>
+                                    <ListItem key={item.uuid + '_item'} mb={2} justifyContent="space-between" alignItems="center" inCart={isInCart} onClick={() => changeItemStatus(item.uuid, isInCart ? Status.IN_HISTORY : Status.IN_CART)}>
                                         <ItemName flex={5} inCart={isInCart} >{item.name}</ItemName>
                                         <Flex flex={1} justifyContent="flex-end" style={{color: 'deeppink'}}>
                                             {item.status === Status.IN_CART ? (
-                                                <RemoveButton ml={2} onClick={() => changeItemStatus(item.id, Status.IN_HISTORY)} justifyContent="center" alignItems="center">x</RemoveButton>
+                                                <RemoveButton ml={2} onClick={() => changeItemStatus(item.uuid, Status.IN_HISTORY)} justifyContent="center" alignItems="center">x</RemoveButton>
                                             ) : (
                                                 <Cart width={20} height={20} />
                                             )}

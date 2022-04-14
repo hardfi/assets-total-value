@@ -47,7 +47,7 @@ const CurrencyAssets = () => {
     //   localStorage.setItem(CURRENCY_CACHE_DATA_KEY, JSON.stringify(res.data.conversion_rates));
     //   setExchangeRates(res.data.conversion_rates);
     // });
-    //
+
     const data = JSON.parse(localStorage.getItem(CURRENCY_CACHE_DATA_KEY) || '');
     setExchangeRates(data);
   }, [baseCurrency]);
@@ -73,8 +73,8 @@ const CurrencyAssets = () => {
   }, [exchangeRates]);
 
   return (
-    <Wrapper flexDirection="column" width="50%" m={4}>
-      <Flex alignItems="center" justifyContent="space-between" mb={4}>
+    <Wrapper flexDirection="column" width="100%" m={4}>
+      <Flex alignItems="center" justifyContent="space-between" flexDirection="column" mb={4}>
         <h2>FX assets</h2>
         <Flex alignItems="center">
           <Box style={{ width: 80, textAlign: 'right' }} mr={2}>
@@ -88,9 +88,9 @@ const CurrencyAssets = () => {
         </Flex>
       </Flex>
       <CurrencyRow justifyContent="space-between">
-        <Box flex={1}>#</Box>
-        <Box flex={1}>Currency</Box>
-        <Box flex={3}>Amount</Box>
+        <Box flex={1}></Box>
+        <Box flex={1}></Box>
+        <Box flex={3}></Box>
         <Box flex={3}>Rate</Box>
         <Box flex={4}>Total</Box>
       </CurrencyRow>
@@ -115,9 +115,6 @@ const CurrencyAssets = () => {
 const Wrapper = styled(Flex)`
   --row-padding: 16px;
   --font-bolder: 600;
-  border-radius: 6px;
-  padding: 40px 30px;
-  background-color: rgba(82, 115, 247, 0.3);
 `;
 
 const CurrencyRow = styled(Flex)<{ background?: boolean }>`
