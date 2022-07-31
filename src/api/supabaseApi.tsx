@@ -4,12 +4,18 @@ import { PostgrestResponse } from '@supabase/supabase-js';
 import { Item, ItemForm, Status } from './typings';
 
 const supabaseApi = {
-  async getAllItems(listNumber: number): Promise<PostgrestResponse<any>> {
+  async getAllItems(): Promise<PostgrestResponse<any>> {
     return supabase
       .from('shopping')
       .select('*', { count: 'exact' })
-      .eq('list', listNumber)
-      .order('name', { ascending: true })
+      .order('updated_at', { ascending: false })
+  },
+  async getShoppingList(listNumber: number): Promise<PostgrestResponse<any>> {
+    return supabase
+        .from('shopping')
+        .select('*', { count: 'exact' })
+        .eq('list', listNumber)
+        .order('name', { ascending: true })
   },
   async getItemsByStatus(status: Status): Promise<PostgrestResponse<any>> {
     return supabase
@@ -26,10 +32,10 @@ const supabaseApi = {
       .from('shopping')
       .insert([item])
   },
-  async updateItemStatus(itemUuid: string, status: Status): Promise<PostgrestResponse<Item>> {
+  async updateItemStatus(itemUuid: string, status: Status, list: number): Promise<PostgrestResponse<Item>> {
     return supabase
       .from('shopping')
-      .update({ status: status })
+      .update({ status, list })
       .eq('uuid', itemUuid)
   },
 };
