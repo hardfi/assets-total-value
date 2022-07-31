@@ -2,6 +2,7 @@ export type Item = {
   name: string;
   status: Status;
   uuid: string;
+  list?: number;
 }
 
 export type ItemForm = Optional<Item, 'uuid'>;

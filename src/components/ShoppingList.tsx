@@ -1,13 +1,13 @@
-import React, {useEffect, useState } from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Box, Flex } from 'rebass';
 import styled from 'styled-components';
 import { ReactComponent as Cart } from '../assets/shopping-cart.svg';
-import {getFromLocalStorage, LocalStorageKeys, saveToLocalStorage } from '../utils/functions';
-import Background from '../assets/bckg.jpeg';
 import supabaseApi from '../api/supabaseApi';
-import { Item, ItemForm, Optional, Status } from '../api/typings';
+import { Item, ItemForm, Status } from '../api/typings';
+import {Button} from "./common/Button";
+import {RoundButton} from "./common/RoundButton";
 
-const ShoppingList = () => {
+const ShoppingList = ({listNumber}: {listNumber: number}) => {
     const [list, setList] = useState<Item[]>([]);
     const [newItem, setNewItem] = useState<string>('');
 
@@ -19,7 +19,7 @@ const ShoppingList = () => {
     }, []);
 
     const getShoppingList = () => {
-        supabaseApi.getAllItems().then(res => {
+        supabaseApi.getAllItems(listNumber).then(res => {
             if (res.data) {
                 setList(res.data);
             }
@@ -28,7 +28,7 @@ const ShoppingList = () => {
 
     const addItem = () => {
         if (newItem) {
-            const item: ItemForm = {name: newItem, status: Status.IN_LIST}
+            const item: ItemForm = {name: newItem, status: Status.IN_LIST, list: listNumber}
             supabaseApi.createNewItem(item).then(res => {
                 if (res.data) {
                     setNewItem('');
@@ -51,9 +51,9 @@ const ShoppingList = () => {
         }
     }
 
-    const returnSortedList = (itemList: Item[]) => {
-        return itemList.sort(({status: inCartA}, {status: inCartB}) => inCartA === inCartB ? 0 : inCartA ? 1 : -1);
-    }
+    const sortedList = useMemo(() => {
+        return list.sort(({status: statusA}, {status: statusB}) => Number(statusA) - Number(statusB));
+    }, [list]);
 
     const closeModal = () => {
         setShowModal(false);
@@ -61,7 +61,7 @@ const ShoppingList = () => {
     }
 
     return (
-        <Wrapper alignItems="center" flexDirection="column" flex={1} height="100vh">
+        <Wrapper alignItems="center" flexDirection="column" flex={1}>
             {showModal ? (
                 <Modal flexDirection="column" flex={1}>
                     <Flex flexDirection="column" flex={1}>
@@ -85,12 +85,11 @@ const ShoppingList = () => {
                 </Modal>
             ) : (
                 <Flex flexDirection="column" width="100%" flex={1}>
-                    <h2>Lista zakupów Sandry</h2>
                     {noItems ? (
                         <h5>Brak produktów</h5>
                     ) : (
                         <List flexDirection="column" mt={3} flex={1}>
-                            {list.filter(i => i.status !== Status.IN_HISTORY).map(item => {
+                            {sortedList.filter(i => i.status !== Status.IN_HISTORY).map(item => {
                                 const isInCart = item.status === Status.IN_CART;
 
                                 return (
@@ -109,7 +108,7 @@ const ShoppingList = () => {
                         </List>
                     )}
                     <Flex mb={4} width="100%">
-                        <Button onClick={() => setShowModal(true)} style={{width: '100%'}}>+ Dodaj produkt</Button>
+                        <RoundButton onClick={() => setShowModal(true)}>+</RoundButton>
                     </Flex>
                 </Flex>
             )}
@@ -118,13 +117,7 @@ const ShoppingList = () => {
 }
 
 const Wrapper = styled(Flex)`
-  --color-pink: pink;
-  --color-lightpink: rgba(255, 192, 203, 0.3);
-  --color-deeppink: deeppink;
-  padding: 40px 26px;
-  max-width: 500px;
-  // background: url(${Background});
-  //background-size: cover;
+  max-width: 100vw;
 `;
 
 const List = styled(Flex)``;
@@ -139,7 +132,7 @@ const Modal = styled(Flex)`
   margin: 0;
   z-index: 99;
   width: 100vw;
-  height: 100wh;
+  height: 100vh;
   background-color: white;
   padding: 40px;
   max-width: 500px;
@@ -159,19 +152,6 @@ const ItemName = styled(Flex)<{inCart?: boolean}>`
   word-break: break-word;
   text-align: left;
   text-decoration: ${({inCart}) => inCart ? 'line-through' : 'none'};
-`;
-
-const Button = styled.button`
-  background-color: var(--color-deeppink);
-  font-weight: bold;
-  height: 46px;
-  border-radius: 6px;
-  padding: 6px 12px;
-  outline: none;
-  border: none;
-  cursor: pointer;
-  color: white;
-  font-size: 18px;
 `;
 
 const RemoveButton = styled(Flex)`

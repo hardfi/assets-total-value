@@ -4,10 +4,11 @@ import { PostgrestResponse } from '@supabase/supabase-js';
 import { Item, ItemForm, Status } from './typings';
 
 const supabaseApi = {
-  async getAllItems(): Promise<PostgrestResponse<any>> {
+  async getAllItems(listNumber: number): Promise<PostgrestResponse<any>> {
     return supabase
       .from('shopping')
       .select('*', { count: 'exact' })
+      .eq('list', listNumber)
       .order('name', { ascending: true })
   },
   async getItemsByStatus(status: Status): Promise<PostgrestResponse<any>> {
