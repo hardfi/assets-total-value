@@ -7,6 +7,7 @@ import {Item, ItemForm, Status} from '../api/typings';
 import {Button} from "./common/Button";
 import {RoundButton} from "./common/RoundButton";
 import {AutoComplete} from "primereact/autocomplete";
+import supabase from "../api/supabase";
 
 const ShoppingList = ({listNumber}: {listNumber: number}) => {
     const [list, setList] = useState<Item[]>([]);
@@ -17,11 +18,37 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
 
     const [showModal, setShowModal] = useState<boolean>(false);
     const noItems = !list.length;
+    const [updatedItem, setUpdatedItem] = useState<Item | null>();
 
     useEffect(() => {
         getShoppingList();
         getAllItems();
+
+        const sub = supabase
+            .from('shopping')
+            .on('*', payload => {
+                const newItem = payload.new;
+                if (newItem) {
+                    setUpdatedItem(newItem);
+                }
+             })
+            .subscribe()
+        return () => {
+            sub.unsubscribe();
+        }
     }, []);
+
+    useEffect(() => {
+        if (updatedItem) {
+            const _list = [...list];
+            const itemToUpdate = _list.find(item => item.uuid === updatedItem.uuid);
+            if (itemToUpdate) {
+                itemToUpdate.status = updatedItem.status;
+                setList(_list);
+            }
+            setUpdatedItem(null);
+        }
+    }, [updatedItem]);
 
     const getShoppingList = () => {
         supabaseApi.getShoppingList(listNumber).then(res => {
@@ -63,7 +90,6 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
                 if (res.data) {
                     setNewItem('');
                     setShowModal(false);
-                    getShoppingList();
                 }
             })
             }
@@ -74,11 +100,7 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
         const _list = [...list];
         const itemToChange = _list.find(item => item.uuid === itemId);
         if (itemToChange) {
-            supabaseApi.updateItemStatus(itemToChange.uuid, status, listNumber).then(res => {
-                if (res.data) {
-                    getShoppingList();
-                }
-            })
+            supabaseApi.updateItemStatus(itemToChange.uuid, status, listNumber).then(() => console.log('changed'))
         }
     }
 
