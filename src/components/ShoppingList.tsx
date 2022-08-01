@@ -125,6 +125,7 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
                         <AutoComplete value={newItem}
                                       suggestions={suggestions}
                                       field="name"
+                                      autoFocus
                                       completeMethod={searchItems}
                                       onChange={(e) => setNewItem(e.target.value)}/>
                         <Flex justifyContent="flex-end" mt={4}>
