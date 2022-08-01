@@ -109,7 +109,7 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
     return (
         <Wrapper alignItems="center" flexDirection="column" flex={1}>
             {showModal ? (
-                <Modal flexDirection="column" flex={1}>
+                <Modal flexDirection="column" flex={1} className="modal-wrapper">
                     <Flex flexDirection="column" flex={1}>
                         <h4>Ostatnio dodawane:</h4>
                         <Flex flexWrap="wrap">
@@ -120,19 +120,18 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
                             ))}
                         </Flex>
                     </Flex>
-                    <AddArticleWrapper flexDirection="column">
+                    <Flex flexDirection="column">
                         <h4>Dodaj artykuł do listy: </h4>
                         <AutoComplete value={newItem}
                                       suggestions={suggestions}
                                       field="name"
-                                      style={{width: '100%'}}
                                       completeMethod={searchItems}
                                       onChange={(e) => setNewItem(e.target.value)}/>
                         <Flex justifyContent="flex-end" mt={4}>
                             <Button style={{backgroundColor: 'grey', marginRight: 4}} onClick={closeModal}>Wróć</Button>
                             <Button onClick={addItem}>+ Dodaj</Button>
                         </Flex>
-                    </AddArticleWrapper>
+                    </Flex>
                 </Modal>
             ) : (
                 <Flex flexDirection="column" width="100%" flex={1}>
@@ -187,7 +186,7 @@ const Modal = styled(Flex)`
   margin: 0;
   z-index: 99;
   width: 100vw;
-  height: 100vh;
+  min-height: calc(100vh - 120px);
   background-color: white;
   padding: 40px;
   max-width: 500px;
@@ -216,12 +215,6 @@ const SmallItem = styled.div`
   padding: 4px 6px;
   border-radius: 3px;
   margin: 2px;
-`;
-
-const AddArticleWrapper = styled(Flex)`
-  position: fixed;
-  bottom: 50px;
-  width: 80vw;
 `;
 
 export default ShoppingList;
