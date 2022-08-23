@@ -17,7 +17,7 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
     const [newItem, setNewItem] = useState<string | Item>('');
 
     const [showModal, setShowModal] = useState<boolean>(false);
-    const noItems = !list.length;
+    const noItems = !list.length || !list.some(item => ['0', '1'].includes(item.status));
     const [updatedItem, setUpdatedItem] = useState<Item | null>();
 
     useEffect(() => {
@@ -90,6 +90,7 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
                 if (res.data) {
                     setNewItem('');
                     setShowModal(false);
+                    getShoppingList();
                 }
             })
             }
@@ -97,10 +98,10 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
     }
 
     const changeItemStatus = (itemId: string, status: Status) => {
-        const _list = [...list];
+        const _list = [...allItems];
         const itemToChange = _list.find(item => item.uuid === itemId);
         if (itemToChange) {
-            supabaseApi.updateItemStatus(itemToChange.uuid, status, listNumber).then(() => console.log('changed'))
+            supabaseApi.updateItemStatus(itemToChange.uuid, status, listNumber).then(getShoppingList)
         }
     }
 
@@ -167,7 +168,7 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
 
                                 return (
                                     <ListItem key={item.uuid + '_item'} mb={2} justifyContent="space-between" alignItems="center" inCart={isInCart} onClick={() => changeItemStatus(item.uuid, isInCart ? Status.IN_HISTORY : Status.IN_CART)}>
-                                        <ItemName flex={5} inCart={isInCart} >{item.name}</ItemName>
+                                        <ItemName flex={5} inCart={isInCart} >{item.name.toLowerCase()}</ItemName>
                                         <Flex flex={1} justifyContent="flex-end" style={{color: 'deeppink'}}>
                                             {item.status === Status.IN_CART ? (
                                                 <RemoveButton ml={2} onClick={() => changeItemStatus(item.uuid, Status.IN_HISTORY)} justifyContent="center" alignItems="center">x</RemoveButton>
