@@ -150,6 +150,11 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
                                       field="name"
                                       autoFocus
                                       completeMethod={searchItems}
+                                      onKeyPress={e => {
+                                          if (e.key === 'Enter') {
+                                              addItem();
+                                          }
+                                      }}
                                       onChange={(e) => setNewItem(e.target.value)}/>
                         <Flex justifyContent="flex-end" mt={4}>
                             <Button style={{backgroundColor: 'grey', marginRight: 4}} onClick={closeModal}>Wróć</Button>
@@ -239,6 +244,7 @@ const SmallItem = styled.div`
   padding: 4px 6px;
   border-radius: 3px;
   margin: 2px;
+  cursor: pointer;
 `;
 
 export default ShoppingList;
