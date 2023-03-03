@@ -9,7 +9,7 @@ import {RoundButton} from "./common/RoundButton";
 import {AutoComplete} from "primereact/autocomplete";
 import supabase from "../api/supabase";
 
-const ShoppingList = ({listNumber}: {listNumber: number}) => {
+const ShoppingList = ({listNumber, theme}: {listNumber: number, theme: string}) => {
     const [list, setList] = useState<Item[]>([]);
     const [allItems, setAllItems] = useState<Item[]>([]);
     const [recentlyAdded, setRecentlyAdded] = useState<Item[]>([]);
@@ -173,8 +173,8 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
 
                                 return (
                                     <ListItem key={item.uuid + '_item'} mb={2} justifyContent="space-between" alignItems="center" inCart={isInCart} onClick={() => changeItemStatus(item.uuid, isInCart ? Status.IN_HISTORY : Status.IN_CART)}>
-                                        <ItemName flex={5} inCart={isInCart} >{item.name.toLowerCase()}</ItemName>
-                                        <Flex flex={1} justifyContent="flex-end" style={{color: 'deeppink'}}>
+                                        <ItemName flex={5} inCart={isInCart} theme={theme}>{item.name.toLowerCase()}</ItemName>
+                                        <Flex flex={1} justifyContent="flex-end" style={{color: 'var(--color-deepmain)'}}>
                                             {item.status === Status.IN_CART ? (
                                                 <RemoveButton ml={2} onClick={() => changeItemStatus(item.uuid, Status.IN_HISTORY)} justifyContent="center" alignItems="center">x</RemoveButton>
                                             ) : (
@@ -187,7 +187,7 @@ const ShoppingList = ({listNumber}: {listNumber: number}) => {
                         </List>
                     )}
                     <Flex mb={4} width="100%">
-                        <RoundButton onClick={() => setShowModal(true)}>+</RoundButton>
+                        <RoundButton onClick={() => setShowModal(true)} theme={theme}>+</RoundButton>
                     </Flex>
                 </Flex>
             )}
@@ -208,7 +208,7 @@ const List = styled(Flex)``;
 const ListItem = styled(Flex)<{inCart?: boolean}>`
   padding: 12px;
   border-radius: 6px;
-  background-color: ${({inCart}) => inCart ? 'var(--color-lightpink)' : 'var(--color-pink)'};
+  background-color: ${({inCart}) => inCart ? 'var(--color-lightmain)' : 'var(--color-main)'};
 `;
 
 const Modal = styled(Flex)`
@@ -221,25 +221,30 @@ const Modal = styled(Flex)`
   max-width: 500px;
 `;
 
-const ItemName = styled(Flex)<{inCart?: boolean}>`
+const ItemName = styled(Flex)<{inCart?: boolean, theme: string}>`
+  color: ${({theme}) => theme === 'pink' ? 'var(--gray-700)' : 'white'};
+  font-weight: 500;
   word-break: break-word;
   text-align: left;
   text-decoration: ${({inCart}) => inCart ? 'line-through' : 'none'};
 `;
 
 const RemoveButton = styled(Flex)`
-  background-color: var(--color-deeppink); 
+  justify-content: center;
+  align-items: center;
+  line-height: 12px;
+  background-color: var(--color-deepmain); 
   border-radius: 100%; 
   width: 20px; 
   height: 20px; 
   color: white;
-  font-weight: bold;
+  font-weight: 700;
   font-size: 14px;
   padding-bottom: 1px;
 `;
 
 const SmallItem = styled.div`
-  background-color: var(--color-deeppink);
+  background-color: var(--color-deepmain);
   color: white;
   padding: 4px 6px;
   border-radius: 3px;

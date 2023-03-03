@@ -1,7 +1,7 @@
 import styled from "styled-components";
 
 export const Button = styled.button`
-  background-color: var(--color-deeppink);
+  background-color: var(--color-deepmain);
   font-weight: bold;
   height: 46px;
   border-radius: 6px;
