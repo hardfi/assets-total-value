@@ -1,47 +1,61 @@
-import React, {useState} from "react";
-import {Flex} from "rebass";
-import ShoppingList from "./ShoppingList";
-import {TabPanel, TabView} from "primereact/tabview";
-import styled from "styled-components";
+import React, { useEffect, useState } from 'react';
+
+import { Flex } from 'rebass';
+
+import { LiabilitiesList } from './LiabilitiesList';
+import ShoppingList from './ShoppingList';
+
+import { TabPanel, TabView } from 'primereact/tabview';
+import styled from 'styled-components';
 
 const Shopping = () => {
-    const [activeTabIndex, setActiveTabIndex] = useState<number>(0);
-    const [theme, setTheme] = useState<string>('pink')
+  const [activeTabIndex, setActiveTabIndex] = useState<number>(0);
+  const [theme, setTheme] = useState<string>('pink');
 
-    const changeTheme = () => {
-        const currentTheme = localStorage.getItem('theme');
-        let newTheme = 'pink';
-        if (currentTheme && currentTheme === 'pink') {
-            newTheme = 'dark';
-        }
-        localStorage.setItem('theme', newTheme)
-        setTheme(newTheme);
+  useEffect(() => {
+    const currentTheme = localStorage.getItem('theme');
+    if (currentTheme) {
+      setTheme(currentTheme);
     }
+  }, []);
 
-    return (
-        <Wrapper className="card" width="100vw" theme={theme}>
-            <TabView activeIndex={activeTabIndex} onTabChange={(e) => setActiveTabIndex(e.index)}>
-                <TabPanel header="Codzienne">
-                    <ShoppingList listNumber={0} theme={theme} />
-                </TabPanel>
-                <TabPanel header="Budowa">
-                    <ShoppingList listNumber={1} theme={theme} />
-                </TabPanel>
-                <TabPanel header="Inne">
-                    <ShoppingList listNumber={2} theme={theme} />
-                </TabPanel>
-            </TabView>
-            <ThemeButton onClick={changeTheme}>C</ThemeButton>
-        </Wrapper>
-    )
-}
+  const changeTheme = () => {
+    const currentTheme = localStorage.getItem('theme');
+    let newTheme = 'pink';
+    if (currentTheme && currentTheme === 'pink') {
+      newTheme = 'dark';
+    }
+    localStorage.setItem('theme', newTheme);
+    setTheme(newTheme);
+  };
 
-const Wrapper = styled(Flex)<{theme?: string}>`
-  --color-main: ${({theme}) => theme === 'pink' ? 'pink': '#5163c7'};
-  --color-lightmain: ${({theme}) => theme === 'pink' ? 'rgba(255, 192, 203, 0.3)': '#adb9ff'};
-  --color-deepmain: ${({theme}) => theme === 'pink' ? 'deeppink': '#304096'};
-  --color-text: ${({theme}) => theme === 'pink' ? 'var(--gray-700)' : 'white'};
-  
+  return (
+    <Wrapper className="card" width="100vw" theme={theme}>
+      <TabView activeIndex={activeTabIndex} onTabChange={(e) => setActiveTabIndex(e.index)}>
+        <TabPanel header="🛒">
+          <ShoppingList listNumber={0} theme={theme} />
+        </TabPanel>
+        <TabPanel header="🏡">
+          <ShoppingList listNumber={1} theme={theme} />
+        </TabPanel>
+        <TabPanel header="📦">
+          <ShoppingList listNumber={2} theme={theme} />
+        </TabPanel>
+        <TabPanel header="💰">
+          <LiabilitiesList theme={theme} />
+        </TabPanel>
+      </TabView>
+      <ThemeButton onClick={changeTheme}>C</ThemeButton>
+    </Wrapper>
+  );
+};
+
+const Wrapper = styled(Flex)<{ theme?: string }>`
+  --color-main: ${({ theme }) => (theme === 'pink' ? 'pink' : '#5163c7')};
+  --color-lightmain: ${({ theme }) => (theme === 'pink' ? 'rgba(255, 192, 203, 0.3)' : '#adb9ff')};
+  --color-deepmain: ${({ theme }) => (theme === 'pink' ? 'deeppink' : '#304096')};
+  --color-text: ${({ theme }) => (theme === 'pink' ? 'var(--gray-700)' : 'white')};
+
   .p-tabview {
     width: 100%;
   }
