@@ -43,13 +43,13 @@ const CurrencyAssets = () => {
   const [total, setTotal] = useState<number>(0);
 
   useEffect(() => {
-    // currencyApi.getRates(baseCurrency).then((res) => {
-    //   localStorage.setItem(CURRENCY_CACHE_DATA_KEY, JSON.stringify(res.data.conversion_rates));
-    //   setExchangeRates(res.data.conversion_rates);
-    // });
+    currencyApi.getRates(baseCurrency).then((res) => {
+      localStorage.setItem(CURRENCY_CACHE_DATA_KEY, JSON.stringify(res.data.conversion_rates));
+      setExchangeRates(res.data.conversion_rates);
+    });
 
-    const data = JSON.parse(localStorage.getItem(CURRENCY_CACHE_DATA_KEY) || '');
-    setExchangeRates(data);
+    // const data = JSON.parse(localStorage.getItem(CURRENCY_CACHE_DATA_KEY) || '');
+    // setExchangeRates(data);
   }, [baseCurrency]);
 
   useMemo(() => {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { Flex } from 'rebass';
 
+import { Currency } from './Currency';
 import { LiabilitiesList } from './LiabilitiesList';
 import ShoppingList from './ShoppingList';
 
@@ -43,6 +44,9 @@ const Shopping = () => {
         </TabPanel>
         <TabPanel header="💰">
           <LiabilitiesList theme={theme} />
+        </TabPanel>
+        <TabPanel header="💸">
+          <Currency />
         </TabPanel>
       </TabView>
       <ThemeButton onClick={changeTheme}>C</ThemeButton>

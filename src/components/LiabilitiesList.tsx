@@ -12,6 +12,7 @@ import { RemoveButton } from './common/RemoveButton';
 import { RoundButton } from './common/RoundButton';
 
 import { InputText } from 'primereact/inputtext';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import styled from 'styled-components';
 
 type Props = {
@@ -37,7 +38,7 @@ export const LiabilitiesList = ({ theme }: Props) => {
   const getLiabilitiesList = () => {
     supabaseApi.getLiabilitiesList().then((res) => {
       if (res.data) {
-        setList(res.data);
+        setList(res.data.sort((a, b) => b.amount - a.amount));
       }
     });
   };
@@ -59,9 +60,19 @@ export const LiabilitiesList = ({ theme }: Props) => {
   };
 
   const updateSum = () => {
-    const _sum = list.reduce((total, item) => (total += +item.amount), 0);
+    const _sum = list.reduce((total, item) => total + +item.amount, 0);
     setSum(String(parseInt(String(_sum))));
   };
+
+  if (!list.length) {
+    return (
+      <ProgressSpinner
+        style={{
+          marginTop: '48px',
+        }}
+      />
+    );
+  }
 
   return (
     <div>
@@ -111,19 +122,19 @@ export const LiabilitiesList = ({ theme }: Props) => {
                 <Flex justifyContent="space-between" flex={1}>
                   <ItemName theme={theme}>{listItem.name.toLowerCase()}</ItemName>
                   <ItemName theme={theme} textAlign="right" mr={2}>
-                    {listItem.amount} zł
+                    {Math.round(listItem.amount)} zł
                   </ItemName>
                 </Flex>
 
                 <Flex justifyContent="flex-end" style={{ color: 'var(--color-deepmain)' }}>
-                  <RemoveButton
-                    ml={2}
-                    onClick={() => console.log('on remove')}
-                    justifyContent="center"
-                    alignItems="center"
-                  >
-                    x
-                  </RemoveButton>
+                  {/*<RemoveButton*/}
+                  {/*  ml={2}*/}
+                  {/*  onClick={() => console.log('on remove')}*/}
+                  {/*  justifyContent="center"*/}
+                  {/*  alignItems="center"*/}
+                  {/*>*/}
+                  {/*  x*/}
+                  {/*</RemoveButton>*/}
                 </Flex>
               </ListItem>
             ))}
@@ -132,15 +143,21 @@ export const LiabilitiesList = ({ theme }: Props) => {
           <Sum
             fontWeight={700}
             style={{ borderTop: '2px solid gray' }}
-            my={3}
+            mt={3}
             py={3}
-            justifyContent="space-between"
             fontSize={20}
+            mb="120px"
           >
-            <Box>SUMA:</Box>
+            <Box mr={4}>SUMA:</Box>
             <Box>{sum} zł</Box>
           </Sum>
-          <RoundButton onClick={() => setShowModal(true)} theme={theme}>
+          <RoundButton
+            onClick={() => setShowModal(true)}
+            theme={theme}
+            style={{
+              opacity: 0.86,
+            }}
+          >
             +
           </RoundButton>
         </>

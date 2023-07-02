@@ -15,6 +15,7 @@ import { RemoveButton } from './common/RemoveButton';
 import { RoundButton } from './common/RoundButton';
 
 import { AutoComplete } from 'primereact/autocomplete';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import styled from 'styled-components';
 
 const ShoppingList = ({ listNumber, theme }: { listNumber: number; theme: string }) => {
@@ -138,6 +139,16 @@ const ShoppingList = ({ listNumber, theme }: { listNumber: number; theme: string
     setShowModal(false);
     setNewItem('');
   };
+
+  if (!list.length) {
+    return (
+      <ProgressSpinner
+        style={{
+          marginTop: '48px',
+        }}
+      />
+    );
+  }
 
   return (
     <Wrapper alignItems="center" flexDirection="column" flex={1}>
