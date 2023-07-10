@@ -43,11 +43,9 @@ const supabaseApi = {
   async getLiabilitiesList(): Promise<PostgrestResponse<any>> {
     return supabase.from('liabilities').select('*', { count: 'exact' });
   },
-  // async removeLiabilityItem(item: LiabilityForm): Promise<PostgrestResponse<any>> {
-  //   return supabase
-  //       .from('liabilities')
-  //       .delete([item])
-  // }
+  async removeLiabilityItem(uuid: string): Promise<PostgrestResponse<any>> {
+    return supabase.from('liabilities').delete().eq('uuid', uuid);
+  },
 };
 
 export default supabaseApi;

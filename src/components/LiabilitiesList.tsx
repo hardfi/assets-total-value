@@ -22,7 +22,9 @@ type Props = {
 export const LiabilitiesList = ({ theme }: Props) => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [list, setList] = useState<LiabilityItem[]>([]);
+  const [unselectedList, setUnselectedList] = useState<LiabilityItem[]>([]);
   const [sum, setSum] = useState<string>('');
+  const [yearlySum, setYearlySum] = useState<string>('');
 
   const [item, setItem] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
@@ -33,7 +35,7 @@ export const LiabilitiesList = ({ theme }: Props) => {
 
   useEffect(() => {
     updateSum();
-  }, [list]);
+  }, [list, unselectedList]);
 
   const getLiabilitiesList = () => {
     supabaseApi.getLiabilitiesList().then((res) => {
@@ -41,6 +43,18 @@ export const LiabilitiesList = ({ theme }: Props) => {
         setList(res.data.sort((a, b) => b.amount - a.amount));
       }
     });
+  };
+
+  const toggleSelected = (item: LiabilityItem) => {
+    const itemIsUnselected = unselectedList.find((unselected) => unselected.uuid === item.uuid);
+    if (itemIsUnselected) {
+      const filtered = unselectedList.filter((item) => item.uuid !== itemIsUnselected.uuid);
+      setUnselectedList(filtered);
+    } else {
+      const newList = [...unselectedList];
+      newList.push(item);
+      setUnselectedList(newList);
+    }
   };
 
   const addItem = () => {
@@ -60,8 +74,25 @@ export const LiabilitiesList = ({ theme }: Props) => {
   };
 
   const updateSum = () => {
-    const _sum = list.reduce((total, item) => total + +item.amount, 0);
+    const _sum = list.reduce((total, item) => {
+      if (unselectedList.find((unselected) => unselected.uuid === item.uuid)) {
+        return total;
+      } else {
+        return total + +item.amount;
+      }
+    }, 0);
+    const yearlySum = unselectedList.reduce((sum, item) => (sum += item.amount), 0);
     setSum(String(parseInt(String(_sum))));
+    setYearlySum(String(parseInt(String(yearlySum))));
+  };
+
+  const removeItem = (uuid: string) => {
+    supabaseApi
+      .removeLiabilityItem(uuid)
+      .then(() => {
+        getLiabilitiesList();
+      })
+      .catch((err) => console.log(err));
   };
 
   if (!list.length) {
@@ -111,46 +142,47 @@ export const LiabilitiesList = ({ theme }: Props) => {
       ) : (
         <>
           <Flex flexDirection="column" mt={3} flex={1}>
-            {list.map((listItem) => (
-              <ListItem
-                key={listItem.uuid + '_listItem'}
-                mb={1}
-                justifyContent="space-between"
-                alignItems="center"
-                padding="8px"
-              >
-                <Flex justifyContent="space-between" flex={1}>
-                  <ItemName theme={theme}>{listItem.name.toLowerCase()}</ItemName>
-                  <ItemName theme={theme} textAlign="right" mr={2}>
-                    {Math.round(listItem.amount)} zł
-                  </ItemName>
-                </Flex>
+            {list.map((listItem) => {
+              const isUnselected = unselectedList.find((item) => item.uuid === listItem.uuid);
+              return (
+                <ListItem
+                  key={listItem.uuid + '_listItem'}
+                  mb={1}
+                  justifyContent="space-between"
+                  alignItems="center"
+                  padding="8px"
+                  opacity={isUnselected ? 0.5 : 1}
+                  onClick={() => toggleSelected(listItem)}
+                >
+                  <Flex justifyContent="space-between" flex={1}>
+                    <ItemName theme={theme}>{listItem.name.toLowerCase()}</ItemName>
+                    <ItemName theme={theme} textAlign="right" mr={2}>
+                      {Math.round(listItem.amount)} zł
+                    </ItemName>
+                  </Flex>
 
-                <Flex justifyContent="flex-end" style={{ color: 'var(--color-deepmain)' }}>
-                  {/*<RemoveButton*/}
-                  {/*  ml={2}*/}
-                  {/*  onClick={() => console.log('on remove')}*/}
-                  {/*  justifyContent="center"*/}
-                  {/*  alignItems="center"*/}
-                  {/*>*/}
-                  {/*  x*/}
-                  {/*</RemoveButton>*/}
-                </Flex>
-              </ListItem>
-            ))}
+                  <Flex justifyContent="flex-end" style={{ color: 'var(--color-deepmain)' }}>
+                    <RemoveButton
+                      ml={2}
+                      onClick={() => removeItem(listItem.uuid!)}
+                      justifyContent="center"
+                      alignItems="center"
+                    >
+                      x
+                    </RemoveButton>
+                  </Flex>
+                </ListItem>
+              );
+            })}
           </Flex>
-
-          <Sum
-            fontWeight={700}
-            style={{ borderTop: '2px solid gray' }}
-            mt={3}
-            py={3}
-            fontSize={20}
-            mb="120px"
-          >
+          <Sum fontWeight={700} style={{ borderTop: '2px solid gray' }} mt={3} py={3} fontSize={20}>
             <Box mr={4}>SUMA:</Box>
             <Box>{sum} zł</Box>
           </Sum>
+          <Yearly mb="120px">
+            <Box mr={3}>Zaznaczone rocznie:</Box>
+            <Box>{yearlySum} zł</Box>
+          </Yearly>
           <RoundButton
             onClick={() => setShowModal(true)}
             theme={theme}
@@ -167,5 +199,9 @@ export const LiabilitiesList = ({ theme }: Props) => {
 };
 
 const Sum = styled(Flex)`
+  color: var(--primary-color);
+`;
+
+const Yearly = styled(Flex)`
   color: var(--primary-color);
 `;
