@@ -83,7 +83,7 @@ export const LiabilitiesList = ({ theme }: Props) => {
     }, 0);
     const yearlySum = unselectedList.reduce((sum, item) => (sum += item.amount), 0);
     setSum(String(parseInt(String(_sum))));
-    setYearlySum(String(parseInt(String(yearlySum))));
+    setYearlySum(String(parseInt(String(yearlySum * 12))));
   };
 
   const removeItem = (uuid: string) => {
