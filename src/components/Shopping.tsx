@@ -4,6 +4,7 @@ import { Flex } from 'rebass';
 
 import { Currency } from './Currency';
 import { LiabilitiesList } from './LiabilitiesList';
+import LinksList from './LinksList';
 import ShoppingList from './ShoppingList';
 
 import { TabPanel, TabView } from 'primereact/tabview';
@@ -39,8 +40,8 @@ const Shopping = () => {
         <TabPanel header="🏡">
           <ShoppingList listNumber={1} theme={theme} />
         </TabPanel>
-        <TabPanel header="📦">
-          <ShoppingList listNumber={2} theme={theme} />
+        <TabPanel header="🔗">
+          <LinksList listNumber={2} theme={theme} />
         </TabPanel>
         <TabPanel header="💰">
           <LiabilitiesList theme={theme} />

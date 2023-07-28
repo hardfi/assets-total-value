@@ -1,23 +1,22 @@
 import React from 'react';
+import { Routes, Route, BrowserRouter as Router } from 'react-router-dom';
 
 import './App.css';
-import CurrencyAssets from './components/CurrencyAssets';
+import Shopping from './components/Shopping';
 
 import 'primeicons/primeicons.css';
 import 'primereact/resources/primereact.min.css';
 import 'primereact/resources/themes/lara-light-indigo/theme.css';
-import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
-import Shopping from "./components/Shopping";
 
 function App() {
   return (
-    <div className="App" style={{display: 'flex', justifyContent: 'center', minHeight: '100vh'}}>
-        <Router>
-            <Routes>
-                <Route path="/" element={ <Shopping/> } />
-                {/*<Route path="/fx" element={ <CurrencyAssets/> } />*/}
-            </Routes>
-        </Router>
+    <div className="App" style={{ display: 'flex', justifyContent: 'center', minHeight: '100vh' }}>
+      <Router>
+        <Routes>
+          {/*<Route path="/" element={<Homepage />} />*/}
+          <Route path="/" element={<Shopping />} />
+        </Routes>
+      </Router>
     </div>
   );
 }
