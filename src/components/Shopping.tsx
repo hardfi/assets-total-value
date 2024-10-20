@@ -46,6 +46,9 @@ const Shopping = () => {
         <TabPanel header="💰">
           <LiabilitiesList theme={theme} />
         </TabPanel>
+        <TabPanel header="💰">
+          <LiabilitiesList theme={theme} />
+        </TabPanel>
         <TabPanel header="💸">
           <Currency />
         </TabPanel>
