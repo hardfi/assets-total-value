@@ -22,18 +22,17 @@ type Props = {
 
 const LS_KEY = 'LS_CHECKED_ITEMS';
 
-export const LiabilitiesList = ({ theme }: Props) => {
-  const [showModal, setShowModal] = useState<boolean>(false);
+export const LiabilitiesListWithCheckboxes = ({ theme }: Props) => {
   const [list, setList] = useState<LiabilityItem[]>([]);
   const [unselectedList, setUnselectedList] = useState<LiabilityItem[]>([]);
-  const [sum, setSum] = useState<string>('');
-  const [yearlySum, setYearlySum] = useState<string>('');
+  const [sumPaid, setSumPaid] = useState<string>('');
+  const [sumUnPaid, setSumUnPaid] = useState<string>('');
 
   const [checkedItems, setCheckedItems] = useState<string[]>([]);
 
   useEffect(() => {
     getLiabilitiesList();
-    const savedCheckboxes = localStorage.getItem('LS_KEY');
+    const savedCheckboxes = localStorage.getItem(LS_KEY);
     if (savedCheckboxes) {
       setCheckedItems(JSON.parse(savedCheckboxes));
     }
@@ -41,7 +40,7 @@ export const LiabilitiesList = ({ theme }: Props) => {
 
   useEffect(() => {
     updateSum();
-  }, [list, unselectedList]);
+  }, [list, checkedItems]);
 
   const getLiabilitiesList = () => {
     supabaseApi.getLiabilitiesList().then((res) => {
@@ -64,16 +63,19 @@ export const LiabilitiesList = ({ theme }: Props) => {
   };
 
   const updateSum = () => {
-    const _sum = list.reduce((total, item) => {
-      if (unselectedList.find((unselected) => unselected.uuid === item.uuid)) {
-        return total;
-      } else {
-        return total + +item.amount;
-      }
-    }, 0);
-    const yearlySum = unselectedList.reduce((sum, item) => (sum += item.amount), 0);
-    setSum(String(parseInt(String(_sum))));
-    setYearlySum(String(parseInt(String(yearlySum * 12))));
+    const _sum = list.reduce(
+      ({ unpaid, paid }, item) => {
+        if (checkedItems.includes(item.name)) {
+          paid += item.amount;
+        } else {
+          unpaid += item.amount;
+        }
+        return { unpaid, paid };
+      },
+      { unpaid: 0, paid: 0 },
+    );
+    setSumPaid(String(parseInt(String(_sum.paid))));
+    setSumUnPaid(String(parseInt(String(_sum.unpaid))));
   };
 
   const onToggleItem = (item: LiabilityItem) => {
@@ -101,7 +103,7 @@ export const LiabilitiesList = ({ theme }: Props) => {
     <>
       <Flex flexDirection="column" mt={3} flex={1}>
         {list.map((listItem) => {
-          const isUnselected = unselectedList.find((item) => item.uuid === listItem.uuid);
+          const isPaid = checkedItems.find((item) => item === listItem.name);
           return (
             <ListItem
               key={listItem.uuid + '_listItem'}
@@ -109,8 +111,8 @@ export const LiabilitiesList = ({ theme }: Props) => {
               justifyContent="space-between"
               alignItems="center"
               padding="8px"
-              opacity={isUnselected ? 0.5 : 1}
-              onClick={() => toggleSelected(listItem)}
+              opacity={isPaid ? 0.5 : 1}
+              onClick={() => onToggleItem(listItem)}
             >
               <Flex justifyContent="space-between" flex={1}>
                 <ItemName theme={theme}>{listItem.name.toLowerCase()}</ItemName>
@@ -123,7 +125,6 @@ export const LiabilitiesList = ({ theme }: Props) => {
                 <Checkbox
                   name={listItem.name}
                   value={listItem.name}
-                  onChange={() => onToggleItem(listItem)}
                   checked={checkedItems.includes(listItem.name)}
                 />
               </Flex>
@@ -131,31 +132,24 @@ export const LiabilitiesList = ({ theme }: Props) => {
           );
         })}
       </Flex>
-      <Sum fontWeight={700} style={{ borderTop: '2px solid gray' }} mt={3} py={3} fontSize={20}>
-        <Box mr={4}>SUMA:</Box>
-        <Box>{sum} zł</Box>
-      </Sum>
-      <Yearly mb="120px">
-        <Box mr={3}>Zaznaczone rocznie:</Box>
-        <Box>{yearlySum} zł</Box>
-      </Yearly>
-      <RoundButton
-        onClick={() => setShowModal(true)}
-        theme={theme}
-        style={{
-          opacity: 0.86,
-        }}
+      <Sum
+        style={{ borderTop: '2px solid gray' }}
+        mt={3}
+        py={3}
+        fontSize={20}
+        justifyContent="space-between"
       >
-        +
-      </RoundButton>
+        <Box mr={4}>Zapłacone:</Box>
+        <Box>{sumPaid} zł</Box>
+      </Sum>
+      <Sum fontWeight={700} pb={3} fontSize={20} justifyContent="space-between">
+        <Box mr={4}>Niezapłacone:</Box>
+        <Box>{sumUnPaid} zł</Box>
+      </Sum>
     </>
   );
 };
 
 const Sum = styled(Flex)`
-  color: var(--primary-color);
-`;
-
-const Yearly = styled(Flex)`
   color: var(--primary-color);
 `;

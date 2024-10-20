@@ -4,6 +4,7 @@ import { Flex } from 'rebass';
 
 import { Currency } from './Currency';
 import { LiabilitiesList } from './LiabilitiesList';
+import { LiabilitiesListWithCheckboxes } from './LiabilitiesListWithCheckboxes';
 import LinksList from './LinksList';
 import ShoppingList from './ShoppingList';
 
@@ -47,7 +48,7 @@ const Shopping = () => {
           <LiabilitiesList theme={theme} />
         </TabPanel>
         <TabPanel header="💰">
-          <LiabilitiesList theme={theme} />
+          <LiabilitiesListWithCheckboxes theme={theme} />
         </TabPanel>
         <TabPanel header="💸">
           <Currency />
