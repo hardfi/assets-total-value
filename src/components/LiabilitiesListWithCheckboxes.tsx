@@ -4,15 +4,10 @@ import { Box, Flex } from 'rebass';
 
 import supabaseApi from '../api/supabaseApi';
 import { LiabilityItem } from '../api/typings';
-import { Button } from './common/Button';
 import { ItemName } from './common/ItemName';
 import { ListItem } from './common/ListItem';
-import { Modal } from './common/Modal';
-import { RemoveButton } from './common/RemoveButton';
-import { RoundButton } from './common/RoundButton';
 
 import { Checkbox } from 'primereact/checkbox';
-import { InputText } from 'primereact/inputtext';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import styled from 'styled-components';
 
@@ -24,7 +19,6 @@ const LS_KEY = 'LS_CHECKED_ITEMS';
 
 export const LiabilitiesListWithCheckboxes = ({ theme }: Props) => {
   const [list, setList] = useState<LiabilityItem[]>([]);
-  const [unselectedList, setUnselectedList] = useState<LiabilityItem[]>([]);
   const [sumPaid, setSumPaid] = useState<string>('');
   const [sumUnPaid, setSumUnPaid] = useState<string>('');
 
@@ -48,18 +42,6 @@ export const LiabilitiesListWithCheckboxes = ({ theme }: Props) => {
         setList(res.data.sort((a, b) => b.amount - a.amount));
       }
     });
-  };
-
-  const toggleSelected = (item: LiabilityItem) => {
-    const itemIsUnselected = unselectedList.find((unselected) => unselected.uuid === item.uuid);
-    if (itemIsUnselected) {
-      const filtered = unselectedList.filter((item) => item.uuid !== itemIsUnselected.uuid);
-      setUnselectedList(filtered);
-    } else {
-      const newList = [...unselectedList];
-      newList.push(item);
-      setUnselectedList(newList);
-    }
   };
 
   const updateSum = () => {

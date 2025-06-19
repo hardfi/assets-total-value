@@ -16,7 +16,10 @@ import { RoundButton } from './common/RoundButton';
 
 import { AutoComplete } from 'primereact/autocomplete';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import { Fade, Slide } from 'react-awesome-reveal';
 import styled from 'styled-components';
+
+const ANIMATION_DURATION = 300;
 
 const ShoppingList = ({ listNumber, theme }: { listNumber: number; theme: string }) => {
   const [list, setList] = useState<Item[]>([]);
@@ -196,46 +199,54 @@ const ShoppingList = ({ listNumber, theme }: { listNumber: number; theme: string
             <h5>Brak produktów</h5>
           ) : (
             <List flexDirection="column" mt={3} flex={1}>
-              {sortedList
-                .filter((i) => i.status !== Status.IN_HISTORY)
-                .map((item) => {
-                  const isInCart = item.status === Status.IN_CART;
+              <Fade cascade damping={0.1} duration={ANIMATION_DURATION} triggerOnce={false}>
+                {sortedList
+                  .filter((i) => i.status !== Status.IN_HISTORY)
+                  .map((item) => {
+                    const isInCart = item.status === Status.IN_CART;
 
-                  return (
-                    <ListItem
-                      key={item.uuid + '_item'}
-                      mb={2}
-                      justifyContent="space-between"
-                      alignItems="center"
-                      inCart={isInCart}
-                      onClick={() =>
-                        changeItemStatus(item.uuid, isInCart ? Status.IN_HISTORY : Status.IN_CART)
-                      }
-                    >
-                      <ItemName flex={5} inCart={isInCart} theme={theme}>
-                        {item.name.toLowerCase()}
-                      </ItemName>
-                      <Flex
-                        flex={1}
-                        justifyContent="flex-end"
-                        style={{ color: 'var(--color-deepmain)' }}
+                    return (
+                      <Slide
+                        key={item.uuid + '_item'}
+                        direction="left"
+                        duration={ANIMATION_DURATION}
+                        triggerOnce={false}
                       >
-                        {item.status === Status.IN_CART ? (
-                          <RemoveButton
-                            ml={2}
-                            onClick={() => changeItemStatus(item.uuid, Status.IN_HISTORY)}
-                            justifyContent="center"
-                            alignItems="center"
+                        <ListItem
+                          mb={2}
+                          justifyContent="space-between"
+                          alignItems="center"
+                          inCart={isInCart}
+                          onClick={() =>
+                            changeItemStatus(item.uuid, isInCart ? Status.IN_HISTORY : Status.IN_CART)
+                          }
+                        >
+                          <ItemName flex={5} inCart={isInCart} theme={theme}>
+                            {item.name.toLowerCase()}
+                          </ItemName>
+                          <Flex
+                            flex={1}
+                            justifyContent="flex-end"
+                            style={{ color: 'var(--color-deepmain)' }}
                           >
-                            x
-                          </RemoveButton>
-                        ) : (
-                          <Cart width={20} height={20} />
-                        )}
-                      </Flex>
-                    </ListItem>
-                  );
-                })}
+                            {item.status === Status.IN_CART ? (
+                              <RemoveButton
+                                ml={2}
+                                onClick={() => changeItemStatus(item.uuid, Status.IN_HISTORY)}
+                                justifyContent="center"
+                                alignItems="center"
+                              >
+                                x
+                              </RemoveButton>
+                            ) : (
+                              <Cart width={20} height={20} />
+                            )}
+                          </Flex>
+                        </ListItem>
+                      </Slide>
+                    );
+                  })}
+              </Fade>
             </List>
           )}
           <Flex mb={4} width="100%">

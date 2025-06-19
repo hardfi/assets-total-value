@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { Flex } from 'rebass';
 
-import { Currency } from './Currency';
+import { CurrencyBanner } from './CurrencyBanner';
 import { LiabilitiesList } from './LiabilitiesList';
 import { LiabilitiesListWithCheckboxes } from './LiabilitiesListWithCheckboxes';
 import LinksList from './LinksList';
@@ -33,8 +33,13 @@ const Shopping = () => {
   };
 
   return (
-    <Wrapper className="card" width="100vw" theme={theme}>
-      <TabView activeIndex={activeTabIndex} onTabChange={(e) => setActiveTabIndex(e.index)}>
+    <Wrapper className="card" width="100vw" theme={theme} flexDirection="column" alignItems="center">
+      <BannerContainer>
+        <CurrencyBanner>
+          <ThemeButton onClick={changeTheme}>C</ThemeButton>
+        </CurrencyBanner>
+      </BannerContainer>
+      <TabView activeIndex={activeTabIndex} onTabChange={(e) => setActiveTabIndex(e.index)} style={{ marginTop: '60px' }}>
         <TabPanel header="🛒">
           <ShoppingList listNumber={0} theme={theme} />
         </TabPanel>
@@ -50,11 +55,7 @@ const Shopping = () => {
         <TabPanel header="💰">
           <LiabilitiesListWithCheckboxes theme={theme} />
         </TabPanel>
-        <TabPanel header="💸">
-          <Currency />
-        </TabPanel>
       </TabView>
-      <ThemeButton onClick={changeTheme}>C</ThemeButton>
     </Wrapper>
   );
 };
@@ -74,11 +75,16 @@ const Wrapper = styled(Flex)<{ theme?: string }>`
   }
 `;
 
+const BannerContainer = styled.div`
+  width: 100%;
+  padding: 0 16px;
+  position: relative;
+`;
+
 const ThemeButton = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  position: fixed;
   top: 14px;
   right: 16px;
   border-radius: 4px;
@@ -88,6 +94,7 @@ const ThemeButton = styled.div`
   font-weight: bold;
   color: var(--color-text);
   background-color: var(--color-main);
+  z-index: 1;
 `;
 
 export default Shopping;
