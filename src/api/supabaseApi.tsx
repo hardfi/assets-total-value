@@ -4,20 +4,20 @@ import { BabyEvent, BabyEventForm, Item, ItemForm, LiabilityItem, Status } from 
 import { PostgrestResponse } from '@supabase/supabase-js';
 
 const supabaseApi = {
-  async getAllItems(): Promise<PostgrestResponse<any>> {
+  async getAllItems(): Promise<PostgrestResponse<Item>> {
     return supabase
       .from('shopping')
       .select('*', { count: 'exact' })
       .order('updated_at', { ascending: false });
   },
-  async getShoppingList(listNumber: number): Promise<PostgrestResponse<any>> {
+  async getShoppingList(listNumber: number): Promise<PostgrestResponse<Item>> {
     return supabase
       .from('shopping')
       .select('*', { count: 'exact' })
       .eq('list', listNumber)
       .order('name', { ascending: true });
   },
-  async getItemsByStatus(status: Status): Promise<PostgrestResponse<any>> {
+  async getItemsByStatus(status: Status): Promise<PostgrestResponse<Item>> {
     return supabase
       .from('shopping')
       .select('*', { count: 'exact' })
@@ -37,16 +37,16 @@ const supabaseApi = {
   ): Promise<PostgrestResponse<Item>> {
     return supabase.from('shopping').update({ status, list }).eq('uuid', itemUuid);
   },
-  async addNewLiabilityItem(item: LiabilityItem): Promise<PostgrestResponse<any>> {
+  async addNewLiabilityItem(item: LiabilityItem): Promise<PostgrestResponse<LiabilityItem>> {
     return supabase.from('liabilities').insert([item]);
   },
-  async getLiabilitiesList(): Promise<PostgrestResponse<any>> {
+  async getLiabilitiesList(): Promise<PostgrestResponse<LiabilityItem>> {
     return supabase.from('liabilities').select('*', { count: 'exact' });
   },
-  async removeLiabilityItem(uuid: string): Promise<PostgrestResponse<any>> {
+  async removeLiabilityItem(uuid: string): Promise<PostgrestResponse<LiabilityItem>> {
     return supabase.from('liabilities').delete().eq('uuid', uuid);
   },
-  async getBabyEvents(limit = 200): Promise<PostgrestResponse<any>> {
+  async getBabyEvents(limit = 200): Promise<PostgrestResponse<BabyEvent>> {
     return supabase
       .from('baby_events')
       .select('*', { count: 'exact' })
@@ -65,7 +65,7 @@ const supabaseApi = {
   ): Promise<PostgrestResponse<BabyEvent>> {
     return supabase.from('baby_events').update({ amount_ml: amountMl }).eq('uuid', uuid);
   },
-  async removeBabyEvent(uuid: string): Promise<PostgrestResponse<any>> {
+  async removeBabyEvent(uuid: string): Promise<PostgrestResponse<BabyEvent>> {
     return supabase.from('baby_events').delete().eq('uuid', uuid);
   },
 };

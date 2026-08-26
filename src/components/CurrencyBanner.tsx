@@ -15,7 +15,7 @@ type CurrencyBannerProps = {
 };
 
 export const CurrencyBanner = ({ children }: CurrencyBannerProps) => {
-  const [exchangeRates, setExchangeRates] = useState<any>();
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>();
 
   useEffect(() => {
     currencyApi.getRates(baseCurrency).then((res) => {

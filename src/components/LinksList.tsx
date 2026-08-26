@@ -1,17 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { Box, Flex } from 'rebass';
+import { Flex } from 'rebass';
 
-import { ReactComponent as Cart } from '../assets/shopping-cart.svg';
-
-import supabase from '../api/supabase';
 import supabaseApi from '../api/supabaseApi';
 import { Item, ItemForm, Status } from '../api/typings';
 import { Button } from './common/Button';
 import { ItemName } from './common/ItemName';
 import { ListItem } from './common/ListItem';
 import { Modal } from './common/Modal';
-import { RemoveButton } from './common/RemoveButton';
 import { RoundButton } from './common/RoundButton';
 
 import { AutoComplete } from 'primereact/autocomplete';

@@ -124,7 +124,7 @@ const ShoppingList = ({ listNumber, theme }: { listNumber: number; theme: string
     );
   }, [list]);
 
-  const searchItems = (event: any) => {
+  const searchItems = (event: { query: string }) => {
     let _suggestions;
     if (!event.query.trim().length) {
       _suggestions = [...allItems];
