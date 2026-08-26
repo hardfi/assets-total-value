@@ -1,0 +1,462 @@
+import React, { useEffect, useMemo, useState } from 'react';
+
+import { Box, Flex } from 'rebass';
+
+import supabaseApi from '../api/supabaseApi';
+import { BabyEvent, BabyEventType } from '../api/typings';
+import { formatDayLabel, formatDuration, formatHour } from '../utils/functions';
+import { Button } from './common/Button';
+import { ItemName } from './common/ItemName';
+import { ListItem } from './common/ListItem';
+import { RemoveButton } from './common/RemoveButton';
+
+import { InputText } from 'primereact/inputtext';
+import { ProgressSpinner } from 'primereact/progressspinner';
+import styled, { keyframes } from 'styled-components';
+
+type BabyAction = {
+  type: BabyEventType;
+  emoji: string;
+  label: string;
+  hasDuration?: boolean;
+};
+
+const ACTIONS: BabyAction[] = [
+  { type: BabyEventType.SLEEP, emoji: '😴', label: 'Sen', hasDuration: true },
+  { type: BabyEventType.FEEDING, emoji: '🍼', label: 'Karmienie', hasDuration: true },
+  { type: BabyEventType.POOP, emoji: '💩', label: 'Kupa' },
+  { type: BabyEventType.PEE, emoji: '💧', label: 'Siku' },
+  { type: BabyEventType.BATH, emoji: '🛁', label: 'Kąpiel' },
+  { type: BabyEventType.VITAMIN, emoji: '💊', label: 'Witamina D' },
+];
+
+const QUICK_AMOUNTS = [30, 60, 90, 120, 150, 180];
+
+const ACTIONS_BY_TYPE = ACTIONS.reduce((map, action) => {
+  map[action.type] = action;
+  return map;
+}, {} as Record<BabyEventType, BabyAction>);
+
+type EventGroup = {
+  day: string;
+  label: string;
+  events: BabyEvent[];
+};
+
+type Props = {
+  theme: string;
+};
+
+const getStart = (event: BabyEvent) => new Date(event.started_at).getTime();
+const getEnd = (event: BabyEvent, fallback: number) =>
+  event.ended_at ? new Date(event.ended_at).getTime() : fallback;
+const isOngoing = (event: BabyEvent) =>
+  !!ACTIONS_BY_TYPE[event.type]?.hasDuration && !event.ended_at;
+
+export const BabyTracker = ({ theme }: Props) => {
+  const [events, setEvents] = useState<BabyEvent[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [pendingType, setPendingType] = useState<BabyEventType | null>(null);
+  const [amountEvent, setAmountEvent] = useState<BabyEvent | null>(null);
+  const [amountValue, setAmountValue] = useState<string>('');
+  const [now, setNow] = useState<number>(Date.now());
+
+  useEffect(() => {
+    getEvents();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getEvents = () =>
+    supabaseApi
+      .getBabyEvents()
+      .then((res) => {
+        if (res.data) {
+          setEvents(res.data);
+        }
+      })
+      .catch((err) => console.log(err))
+      .finally(() => setLoading(false));
+
+  // events arrive sorted by started_at descending, so the first hit is always the latest one
+  const ongoingByType = useMemo(() => {
+    const map: Partial<Record<BabyEventType, BabyEvent>> = {};
+    events.forEach((event) => {
+      if (isOngoing(event) && !map[event.type]) {
+        map[event.type] = event;
+      }
+    });
+    return map;
+  }, [events]);
+
+  const lastByType = useMemo(() => {
+    const map: Partial<Record<BabyEventType, BabyEvent>> = {};
+    events.forEach((event) => {
+      if (!map[event.type]) {
+        map[event.type] = event;
+      }
+    });
+    return map;
+  }, [events]);
+
+  const groups = useMemo(() => {
+    const result: EventGroup[] = [];
+    events.forEach((event) => {
+      const date = new Date(event.started_at);
+      const day = date.toDateString();
+      const currentGroup = result[result.length - 1];
+      if (currentGroup && currentGroup.day === day) {
+        currentGroup.events.push(event);
+      } else {
+        result.push({ day, label: formatDayLabel(date), events: [event] });
+      }
+    });
+    return result;
+  }, [events]);
+
+  const handleAction = (action: BabyAction) => {
+    if (pendingType) {
+      return;
+    }
+    setPendingType(action.type);
+    const ongoing = ongoingByType[action.type];
+    const request = ongoing
+      ? supabaseApi.finishBabyEvent(ongoing.uuid!, new Date().toISOString())
+      : supabaseApi.createBabyEvent({
+          type: action.type,
+          started_at: new Date().toISOString(),
+        });
+
+    request
+      .then(() => getEvents())
+      .then(() => {
+        if (ongoing && action.type === BabyEventType.FEEDING) {
+          openAmountDialog(ongoing);
+        }
+      })
+      .catch((err) => console.log(err))
+      .finally(() => setPendingType(null));
+  };
+
+  const openAmountDialog = (event: BabyEvent) => {
+    setAmountEvent(event);
+    setAmountValue(event.amount_ml ? String(event.amount_ml) : '');
+  };
+
+  const closeAmountDialog = () => {
+    setAmountEvent(null);
+    setAmountValue('');
+  };
+
+  const saveAmount = () => {
+    if (!amountEvent) {
+      return;
+    }
+    supabaseApi
+      .setBabyEventAmount(amountEvent.uuid!, amountValue ? +amountValue : null)
+      .then(() => getEvents())
+      .catch((err) => console.log(err));
+    closeAmountDialog();
+  };
+
+  const removeEvent = (uuid: string) => {
+    supabaseApi
+      .removeBabyEvent(uuid)
+      .then(() => getEvents())
+      .catch((err) => console.log(err));
+  };
+
+  const getTileSubtitle = (action: BabyAction) => {
+    const ongoing = ongoingByType[action.type];
+    if (ongoing) {
+      return formatDuration(now - getStart(ongoing));
+    }
+    const last = lastByType[action.type];
+    if (!last) {
+      return '—';
+    }
+    return `${formatDuration(now - getEnd(last, getStart(last)))} temu`;
+  };
+
+  const getDaySummary = (group: EventGroup) => {
+    const sleepMs = group.events
+      .filter((event) => event.type === BabyEventType.SLEEP)
+      .reduce((total, event) => total + (getEnd(event, now) - getStart(event)), 0);
+    const feedings = group.events.filter((event) => event.type === BabyEventType.FEEDING).length;
+    const poops = group.events.filter((event) => event.type === BabyEventType.POOP).length;
+    const milkMl = group.events.reduce((total, event) => total + (event.amount_ml || 0), 0);
+
+    return [
+      sleepMs ? `😴 ${formatDuration(sleepMs)}` : null,
+      feedings ? `🍼 ${feedings}x${milkMl ? ` · ${milkMl} ml` : ''}` : null,
+      poops ? `💩 ${poops}x` : null,
+    ]
+      .filter(Boolean)
+      .join('   ·   ');
+  };
+
+  if (loading) {
+    return <ProgressSpinner style={{ marginTop: '48px' }} />;
+  }
+
+  return (
+    <Flex flexDirection="column" mt={2} pb="80px">
+      <Tiles>
+        {ACTIONS.map((action) => {
+          const ongoing = !!ongoingByType[action.type];
+          return (
+            <Tile
+              key={action.type}
+              $active={ongoing}
+              $pending={pendingType === action.type}
+              onClick={() => handleAction(action)}
+            >
+              <Emoji>{action.emoji}</Emoji>
+              <TileLabel>{action.label}</TileLabel>
+              <TileValue>{getTileSubtitle(action)}</TileValue>
+              {action.hasDuration ? <TileHint>{ongoing ? 'stop' : 'start'}</TileHint> : null}
+            </Tile>
+          );
+        })}
+      </Tiles>
+
+      {groups.length ? (
+        groups.map((group) => (
+          <Box key={group.day} mt={4}>
+            <DayHeader alignItems="baseline" justifyContent="space-between">
+              <Box>{group.label}</Box>
+              <DaySummary>{getDaySummary(group)}</DaySummary>
+            </DayHeader>
+            {group.events.map((event) => {
+              const action = ACTIONS_BY_TYPE[event.type];
+              const ongoing = isOngoing(event);
+              const isFeeding = event.type === BabyEventType.FEEDING;
+              return (
+                <EventRow
+                  key={event.uuid}
+                  $ongoing={ongoing}
+                  $clickable={isFeeding}
+                  mb={1}
+                  alignItems="center"
+                  justifyContent="space-between"
+                  padding="8px"
+                  onClick={isFeeding ? () => openAmountDialog(event) : undefined}
+                >
+                  <Emoji>{action?.emoji || '❓'}</Emoji>
+                  <Flex flexDirection="column" flex={1} ml={2}>
+                    <ItemName theme={theme}>{action?.label || event.type}</ItemName>
+                    <Hours>
+                      {formatHour(new Date(event.started_at))}
+                      {event.ended_at ? ` – ${formatHour(new Date(event.ended_at))}` : ''}
+                    </Hours>
+                  </Flex>
+                  {action?.hasDuration ? (
+                    <ItemName theme={theme} mr={2} style={{ whiteSpace: 'nowrap' }}>
+                      {ongoing
+                        ? `⏱ ${formatDuration(now - getStart(event))}`
+                        : formatDuration(getEnd(event, now) - getStart(event))}
+                      {event.amount_ml ? ` · ${event.amount_ml} ml` : ''}
+                    </ItemName>
+                  ) : null}
+                  {isFeeding && !ongoing && !event.amount_ml ? <AddAmount>+ ml</AddAmount> : null}
+                  <RemoveButton
+                    style={{ flexShrink: 0 }}
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      removeEvent(event.uuid!);
+                    }}
+                  >
+                    x
+                  </RemoveButton>
+                </EventRow>
+              );
+            })}
+          </Box>
+        ))
+      ) : (
+        <Empty mt={5}>Jeszcze nic tu nie ma — kliknij ikonę powyżej 👆</Empty>
+      )}
+
+      {amountEvent ? (
+        <Overlay onClick={closeAmountDialog}>
+          <Dialog onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <DialogTitle>🍼 Ile ml?</DialogTitle>
+            <Amounts>
+              {QUICK_AMOUNTS.map((amount) => (
+                <AmountButton
+                  key={amount}
+                  $selected={+amountValue === amount}
+                  onClick={() => setAmountValue(String(amount))}
+                >
+                  {amount}
+                </AmountButton>
+              ))}
+            </Amounts>
+            <InputText
+              value={amountValue}
+              type="number"
+              onChange={(e) => setAmountValue(e.target.value)}
+              placeholder="ml"
+              style={{ width: '100%', marginTop: '12px' }}
+            />
+            <Flex justifyContent="space-between" mt={3}>
+              <Button style={{ backgroundColor: 'grey' }} onClick={closeAmountDialog}>
+                Anuluj
+              </Button>
+              <Button onClick={saveAmount}>Zapisz</Button>
+            </Flex>
+          </Dialog>
+        </Overlay>
+      ) : null}
+    </Flex>
+  );
+};
+
+const pulse = keyframes`
+  0% { box-shadow: 0 0 0 0 var(--color-deepmain); }
+  70% { box-shadow: 0 0 0 8px rgba(0, 0, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+`;
+
+const Tiles = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 8px;
+  width: 100%;
+`;
+
+const Tile = styled.div<{ $active?: boolean; $pending?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  background-color: ${({ $active }) => ($active ? 'var(--color-deepmain)' : 'var(--color-main)')};
+  color: ${({ $active }) => ($active ? 'white' : 'var(--color-text)')};
+  opacity: ${({ $pending }) => ($pending ? 0.5 : 1)};
+  animation: ${({ $active }) => ($active ? pulse : 'none')} 2s infinite;
+`;
+
+const Emoji = styled.div`
+  font-size: 26px;
+  line-height: 1.2;
+`;
+
+const TileLabel = styled.div`
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 2px;
+`;
+
+const TileValue = styled.div`
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 2px;
+  white-space: nowrap;
+`;
+
+const TileHint = styled.div`
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.7;
+`;
+
+const DayHeader = styled(Flex)`
+  color: var(--primary-color);
+  font-weight: 700;
+  border-bottom: 2px solid var(--color-main);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+`;
+
+const DaySummary = styled.div`
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+`;
+
+const EventRow = styled(ListItem)<{ $ongoing?: boolean; $clickable?: boolean }>`
+  border-left: 4px solid ${({ $ongoing }) => ($ongoing ? 'var(--color-deepmain)' : 'transparent')};
+  cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
+`;
+
+const AddAmount = styled.div`
+  margin-right: 8px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px dashed var(--color-deepmain);
+  color: var(--color-deepmain);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+`;
+
+const Overlay = styled.div`
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: rgba(0, 0, 0, 0.45);
+`;
+
+const Dialog = styled.div`
+  width: 100%;
+  max-width: 320px;
+  padding: 20px;
+  border-radius: 12px;
+  background-color: white;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+`;
+
+const DialogTitle = styled.div`
+  margin-bottom: 12px;
+  color: var(--gray-700);
+  font-size: 18px;
+  font-weight: 700;
+`;
+
+const Amounts = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 8px;
+`;
+
+const AmountButton = styled.div<{ $selected?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 700;
+  background-color: ${({ $selected }) =>
+    $selected ? 'var(--color-deepmain)' : 'var(--color-main)'};
+  color: ${({ $selected }) => ($selected ? 'white' : 'var(--gray-700)')};
+`;
+
+const Hours = styled.div`
+  color: var(--color-text);
+  font-size: 12px;
+  opacity: 0.8;
+  text-align: left;
+`;
+
+const Empty = styled(Box)`
+  color: var(--primary-color);
+`;
+
+export default BabyTracker;

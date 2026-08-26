@@ -1,5 +1,5 @@
 import supabase from './supabase';
-import { Item, ItemForm, LiabilityItem, Status } from './typings';
+import { BabyEvent, BabyEventForm, Item, ItemForm, LiabilityItem, Status } from './typings';
 
 import { PostgrestResponse } from '@supabase/supabase-js';
 
@@ -45,6 +45,28 @@ const supabaseApi = {
   },
   async removeLiabilityItem(uuid: string): Promise<PostgrestResponse<any>> {
     return supabase.from('liabilities').delete().eq('uuid', uuid);
+  },
+  async getBabyEvents(limit = 200): Promise<PostgrestResponse<any>> {
+    return supabase
+      .from('baby_events')
+      .select('*', { count: 'exact' })
+      .order('started_at', { ascending: false })
+      .limit(limit);
+  },
+  async createBabyEvent(event: BabyEventForm): Promise<PostgrestResponse<BabyEvent>> {
+    return supabase.from('baby_events').insert([event]);
+  },
+  async finishBabyEvent(uuid: string, endedAt: string): Promise<PostgrestResponse<BabyEvent>> {
+    return supabase.from('baby_events').update({ ended_at: endedAt }).eq('uuid', uuid);
+  },
+  async setBabyEventAmount(
+    uuid: string,
+    amountMl: number | null,
+  ): Promise<PostgrestResponse<BabyEvent>> {
+    return supabase.from('baby_events').update({ amount_ml: amountMl }).eq('uuid', uuid);
+  },
+  async removeBabyEvent(uuid: string): Promise<PostgrestResponse<any>> {
+    return supabase.from('baby_events').delete().eq('uuid', uuid);
   },
 };
 

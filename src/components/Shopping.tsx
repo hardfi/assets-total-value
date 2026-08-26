@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { Flex } from 'rebass';
 
+import BabyTracker from './BabyTracker';
 import { CurrencyBanner } from './CurrencyBanner';
 import { LiabilitiesList } from './LiabilitiesList';
 import { LiabilitiesListWithCheckboxes } from './LiabilitiesListWithCheckboxes';
@@ -33,13 +34,23 @@ const Shopping = () => {
   };
 
   return (
-    <Wrapper className="card" width="100vw" theme={theme} flexDirection="column" alignItems="center">
+    <Wrapper
+      className="card"
+      width="100vw"
+      theme={theme}
+      flexDirection="column"
+      alignItems="center"
+    >
       <BannerContainer>
         <CurrencyBanner>
           <ThemeButton onClick={changeTheme}>C</ThemeButton>
         </CurrencyBanner>
       </BannerContainer>
-      <TabView activeIndex={activeTabIndex} onTabChange={(e) => setActiveTabIndex(e.index)} style={{ marginTop: '60px' }}>
+      <TabView
+        activeIndex={activeTabIndex}
+        onTabChange={(e) => setActiveTabIndex(e.index)}
+        style={{ marginTop: '60px' }}
+      >
         <TabPanel header="🛒">
           <ShoppingList listNumber={0} theme={theme} />
         </TabPanel>
@@ -54,6 +65,9 @@ const Shopping = () => {
         </TabPanel>
         <TabPanel header="💰">
           <LiabilitiesListWithCheckboxes theme={theme} />
+        </TabPanel>
+        <TabPanel header="👶">
+          <BabyTracker theme={theme} />
         </TabPanel>
       </TabView>
     </Wrapper>
