@@ -23,7 +23,9 @@ type BabyAction = {
 
 const ACTIONS: BabyAction[] = [
   { type: BabyEventType.SLEEP, emoji: '😴', label: 'Sen', hasDuration: true },
-  { type: BabyEventType.FEEDING, emoji: '🍼', label: 'Karmienie', hasDuration: true },
+  // Logged with a single tap once the feed is over — only the "how long since
+  // the last one" counter matters, not how long it took.
+  { type: BabyEventType.FEEDING, emoji: '🍼', label: 'Karmienie' },
   { type: BabyEventType.POOP, emoji: '💩', label: 'Kupa' },
   { type: BabyEventType.PEE, emoji: '💧', label: 'Siku' },
   { type: BabyEventType.BATH, emoji: '🛁', label: 'Kąpiel' },
@@ -122,19 +124,34 @@ export const BabyTracker = ({ theme }: Props) => {
       return;
     }
     setPendingType(action.type);
-    const ongoing = ongoingByType[action.type];
-    const request = ongoing
-      ? supabaseApi.finishBabyEvent(ongoing.uuid!, new Date().toISOString())
-      : supabaseApi.createBabyEvent({
-          type: action.type,
-          started_at: new Date().toISOString(),
-        });
 
-    request
+    // Anything that happens closes whatever timer is running: the baby cannot
+    // still be asleep once we log a poop. The new event starts at the same
+    // instant the old one ends, so the history has no gap.
+    const timestamp = new Date().toISOString();
+    const running = events.filter(isOngoing);
+    const stoppedItself = running.some((event) => event.type === action.type);
+
+    const requests = running.map((event) =>
+      supabaseApi.finishBabyEvent(event.uuid!, timestamp).then((res) => res),
+    );
+    const created = stoppedItself
+      ? null
+      : supabaseApi
+          .createBabyEvent({ type: action.type, started_at: timestamp })
+          .then((res) => res);
+    if (created) {
+      requests.push(created);
+    }
+
+    Promise.all(requests)
       .then(() => getEvents())
-      .then(() => {
-        if (ongoing && action.type === BabyEventType.FEEDING) {
-          openAmountDialog(ongoing);
+      .then(() => created)
+      .then((res) => {
+        // A feed is logged once it is already over, so ask for the amount now.
+        const inserted = res && res.data ? res.data[0] : undefined;
+        if (action.type === BabyEventType.FEEDING && inserted) {
+          openAmountDialog(inserted);
         }
       })
       .catch((err) => console.log(err))
@@ -258,10 +275,14 @@ export const BabyTracker = ({ theme }: Props) => {
                       {ongoing
                         ? `⏱ ${formatDuration(now - getStart(event))}`
                         : formatDuration(getEnd(event, now) - getStart(event))}
-                      {event.amount_ml ? ` · ${event.amount_ml} ml` : ''}
                     </ItemName>
                   ) : null}
-                  {isFeeding && !ongoing && !event.amount_ml ? <AddAmount>+ ml</AddAmount> : null}
+                  {isFeeding && event.amount_ml ? (
+                    <ItemName theme={theme} mr={2} style={{ whiteSpace: 'nowrap' }}>
+                      {event.amount_ml} ml
+                    </ItemName>
+                  ) : null}
+                  {isFeeding && !event.amount_ml ? <AddAmount>+ ml</AddAmount> : null}
                   <RemoveButton
                     style={{ flexShrink: 0 }}
                     onClick={(e: React.MouseEvent) => {
@@ -372,8 +393,8 @@ const DayHeader = styled(Flex)`
   color: var(--primary-color);
   font-weight: 700;
   border-bottom: 2px solid var(--color-main);
-  padding-bottom: 4px;
-  margin-bottom: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
 `;
 
 const DaySummary = styled.div`
@@ -445,7 +466,7 @@ const AmountButton = styled.div<{ $selected?: boolean }>`
   font-weight: 700;
   background-color: ${({ $selected }) =>
     $selected ? 'var(--color-deepmain)' : 'var(--color-main)'};
-  color: ${({ $selected }) => ($selected ? 'white' : 'var(--gray-700)')};
+  color: ${({ $selected }) => ($selected ? 'white' : 'var(--color-text)')};
 `;
 
 const Hours = styled.div`

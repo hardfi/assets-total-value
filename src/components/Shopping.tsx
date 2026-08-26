@@ -51,6 +51,9 @@ const Shopping = () => {
         onTabChange={(e) => setActiveTabIndex(e.index)}
         style={{ marginTop: '60px' }}
       >
+        <TabPanel header="👶">
+          <BabyTracker theme={theme} />
+        </TabPanel>
         <TabPanel header="🛒">
           <ShoppingList listNumber={0} theme={theme} />
         </TabPanel>
@@ -65,9 +68,6 @@ const Shopping = () => {
         </TabPanel>
         <TabPanel header="💰">
           <LiabilitiesListWithCheckboxes theme={theme} />
-        </TabPanel>
-        <TabPanel header="👶">
-          <BabyTracker theme={theme} />
         </TabPanel>
       </TabView>
     </Wrapper>
