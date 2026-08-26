@@ -243,7 +243,7 @@ export const BabyTracker = ({ theme }: Props) => {
       {groups.length ? (
         groups.map((group) => (
           <Box key={group.day} mt={4}>
-            <DayHeader alignItems="baseline" justifyContent="space-between">
+            <DayHeader alignItems="baseline" justifyContent="space-between" mb={3}>
               <Box>{group.label}</Box>
               <DaySummary>{getDaySummary(group)}</DaySummary>
             </DayHeader>
@@ -394,7 +394,8 @@ const DayHeader = styled(Flex)`
   font-weight: 700;
   border-bottom: 2px solid var(--color-main);
   padding-bottom: 8px;
-  margin-bottom: 16px;
+  /* the gap below is set with rebass's mb prop, not here: Box's own
+     emotion styles hard-code margin: 0 and would override it */
 `;
 
 const DaySummary = styled.div`
