@@ -1,0 +1,60 @@
+# Postgres + PostgREST for assets-total-value.
+#
+# Runs as its own compose project, side by side with home-helper on the
+# same VM. The only thing they share is the `edge` network, which exists
+# purely so home-helper's Caddy can reach `postgrest` by name.
+#
+# Note which service is on which network:
+#   db        -> internal only. Unreachable from Caddy, and never
+#                published to the host, so Postgres is not on the internet.
+#   postgrest -> internal + edge. The only thing Caddy can talk to.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: atv
+      POSTGRES_USER: atv
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGRST_DB_PASSWORD: ${PGRST_DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # Only executed when db_data is EMPTY. See SETUP.md "Changing the schema later".
+      - ./init:/docker-entrypoint-initdb.d:ro
+    # Tuned down for a 1 GB e2-micro that is already running another app.
+    command: >
+      postgres
+      -c shared_buffers=96MB
+      -c effective_cache_size=256MB
+      -c max_connections=30
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atv -d atv"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${PGRST_DB_PASSWORD}@db:5432/atv
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: web_anon
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
+      PGRST_SERVER_PORT: "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3000"
+    networks: [internal, edge]
+
+volumes:
+  db_data:
+
+networks:
+  internal:
+  edge:
+    external: true
