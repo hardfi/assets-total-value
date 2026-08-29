@@ -80,6 +80,12 @@ const Wrapper = styled(Flex)<{ theme?: string }>`
   --color-deepmain: ${({ theme }) => (theme === 'pink' ? 'deeppink' : '#304096')};
   --color-text: ${({ theme }) => (theme === 'pink' ? 'var(--gray-700)' : 'white')};
 
+  /* Supplements get their own hue so a dose is never mistaken for a nappy
+     change. Teal reads as clearly "other" against both the pink and the
+     indigo palette, and keeps contrast with --color-text in each. */
+  --color-supplement: ${({ theme }) => (theme === 'pink' ? '#b2dfdb' : '#2f7d78')};
+  --color-supplement-deep: ${({ theme }) => (theme === 'pink' ? '#00695c' : '#9fe3dc')};
+
   .p-tabview {
     width: 100%;
   }

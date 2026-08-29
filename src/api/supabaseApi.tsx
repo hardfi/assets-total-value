@@ -47,11 +47,16 @@ const supabaseApi = {
     return supabase.from('liabilities').delete().eq('uuid', uuid);
   },
   async getBabyEvents(limit = 200): Promise<PostgrestResponse<BabyEvent>> {
-    return supabase
-      .from('baby_events')
-      .select('*', { count: 'exact' })
-      .order('started_at', { ascending: false })
-      .limit(limit);
+    return (
+      supabase
+        .from('baby_events')
+        .select('*', { count: 'exact' })
+        .order('started_at', { ascending: false })
+        // created_at is never edited, so it keeps same-instant rows in the order
+        // they were actually logged instead of letting Postgres pick.
+        .order('created_at', { ascending: false })
+        .limit(limit)
+    );
   },
   async createBabyEvent(event: BabyEventForm): Promise<PostgrestResponse<BabyEvent>> {
     return supabase.from('baby_events').insert([event]);

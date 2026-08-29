@@ -82,6 +82,13 @@ type Props = {
 const getStart = (event: BabyEvent) => new Date(event.started_at).getTime();
 const getEnd = (event: BabyEvent, fallback: number) =>
   event.ended_at ? new Date(event.ended_at).getTime() : fallback;
+const SUPPLEMENT_TYPES: BabyEventType[] = [
+  ...SUPPLEMENTS.map((supplement) => supplement.type),
+  LEGACY_VITAMIN.type,
+];
+const isSupplement = (type: BabyEventType) => SUPPLEMENT_TYPES.includes(type);
+const isToday = (isoDate: string) => new Date(isoDate).toDateString() === new Date().toDateString();
+
 const isOngoing = (event: BabyEvent) =>
   !!ACTIONS_BY_TYPE[event.type]?.hasDuration && !event.ended_at;
 
@@ -214,18 +221,29 @@ export const BabyTracker = ({ theme }: Props) => {
     if (!editEvent || editInvalid) {
       return;
     }
-    const startedAt = fromDateTimeLocal(startValue);
-    if (!startedAt) {
-      return;
-    }
+    // A datetime-local field carries no seconds, so writing one back would zero
+    // them and let a later event sort ahead of an earlier one. Only send the
+    // fields actually touched; an untouched timestamp keeps its full precision.
+    const changes: Partial<BabyEvent> = {};
 
-    const changes: Partial<BabyEvent> = { started_at: startedAt };
+    if (startValue !== toDateTimeLocal(editEvent.started_at)) {
+      const startedAt = fromDateTimeLocal(startValue);
+      if (!startedAt) {
+        return;
+      }
+      changes.started_at = startedAt;
+    }
     // Only events that already finished carry an end — never resurrect one.
-    if (editEvent.ended_at) {
+    if (editEvent.ended_at && endValue !== toDateTimeLocal(editEvent.ended_at)) {
       changes.ended_at = fromDateTimeLocal(endValue) || editEvent.ended_at;
     }
     if (editEvent.type === BabyEventType.FEEDING) {
       changes.amount_ml = amountValue ? +amountValue : null;
+    }
+
+    if (!Object.keys(changes).length) {
+      closeEditDialog();
+      return;
     }
 
     supabaseApi
@@ -322,6 +340,7 @@ export const BabyTracker = ({ theme }: Props) => {
                 <EventRow
                   key={event.uuid}
                   $ongoing={ongoing}
+                  $supplement={isSupplement(event.type)}
                   mb={1}
                   alignItems="center"
                   justifyContent="space-between"
@@ -373,9 +392,11 @@ export const BabyTracker = ({ theme }: Props) => {
             <DialogTitle>💊 Co podaliśmy?</DialogTitle>
             {SUPPLEMENTS.map((supplement) => {
               const last = lastByType[supplement.type];
+              const givenToday = !!last && isToday(last.started_at);
               return (
                 <SupplementRow
                   key={supplement.type}
+                  $done={givenToday}
                   onClick={() => {
                     setShowSupplements(false);
                     handleAction(supplement);
@@ -383,8 +404,12 @@ export const BabyTracker = ({ theme }: Props) => {
                 >
                   <Emoji>{supplement.emoji}</Emoji>
                   <SupplementLabel>{supplement.label}</SupplementLabel>
-                  <SupplementAgo>
-                    {last ? `${formatDuration(now - getStart(last))} temu` : '—'}
+                  <SupplementAgo $done={givenToday}>
+                    {givenToday && last
+                      ? `✓ dziś ${formatHour(new Date(last.started_at))}`
+                      : last
+                      ? `${formatDuration(now - getStart(last))} temu`
+                      : '—'}
                   </SupplementAgo>
                 </SupplementRow>
               );
@@ -548,8 +573,16 @@ const DaySummary = styled.div`
   white-space: nowrap;
 `;
 
-const EventRow = styled(ListItem)<{ $ongoing?: boolean }>`
-  border-left: 4px solid ${({ $ongoing }) => ($ongoing ? 'var(--color-deepmain)' : 'transparent')};
+const EventRow = styled(ListItem)<{ $ongoing?: boolean; $supplement?: boolean }>`
+  background-color: ${({ $supplement }) =>
+    $supplement ? 'var(--color-supplement)' : 'var(--color-main)'};
+  border-left: 4px solid
+    ${({ $ongoing, $supplement }) =>
+      $ongoing
+        ? 'var(--color-deepmain)'
+        : $supplement
+        ? 'var(--color-supplement-deep)'
+        : 'transparent'};
   cursor: pointer;
 `;
 
@@ -596,7 +629,7 @@ const DialogTitle = styled.div`
   font-weight: 700;
 `;
 
-const SupplementRow = styled.div`
+const SupplementRow = styled.div<{ $done?: boolean }>`
   display: flex;
   align-items: center;
   margin-bottom: 8px;
@@ -604,8 +637,10 @@ const SupplementRow = styled.div`
   border-radius: 8px;
   cursor: pointer;
   user-select: none;
-  background-color: var(--color-main);
+  background-color: var(--color-supplement);
   color: var(--color-text);
+  /* Already given today gets a ring, so a second dose needs a deliberate tap. */
+  border: 2px solid ${({ $done }) => ($done ? 'var(--color-supplement-deep)' : 'transparent')};
 `;
 
 const SupplementLabel = styled.div`
@@ -615,11 +650,12 @@ const SupplementLabel = styled.div`
   text-align: left;
 `;
 
-const SupplementAgo = styled.div`
+const SupplementAgo = styled.div<{ $done?: boolean }>`
   font-size: 12px;
-  font-weight: 600;
+  font-weight: ${({ $done }) => ($done ? 800 : 600)};
   white-space: nowrap;
-  opacity: 0.8;
+  color: ${({ $done }) => ($done ? 'var(--color-supplement-deep)' : 'inherit')};
+  opacity: ${({ $done }) => ($done ? 1 : 0.8)};
 `;
 
 const FieldLabel = styled.div`
