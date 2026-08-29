@@ -105,7 +105,11 @@ create table if not exists public.liabilities (
 -- ---------------------------------------------------------------------
 --  5. baby_events  — the 👶 tab
 -- ---------------------------------------------------------------------
---  type: sleep | feeding | poop | pee | bath | vitamin
+--  type: sleep | feeding | poop | pee | bath
+--        | vitamin_d | iron | vitamin_b | probiotic
+--        | vitamin  (legacy: the single pill button, before the picker)
+--  Deliberately no CHECK constraint, so adding a supplement stays a
+--  front-end-only change.
 --  ended_at NULL means "instant event" for poop/pee/bath/vitamin, and
 --  "still running" for sleep/feeding — the app tells them apart by type.
 --  amount_ml is only ever set on feeding rows.

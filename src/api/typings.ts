@@ -27,7 +27,12 @@ export enum BabyEventType {
   POOP = 'poop',
   PEE = 'pee',
   BATH = 'bath',
+  // Kept so rows logged before the supplements picker existed still render.
   VITAMIN = 'vitamin',
+  VITAMIN_D = 'vitamin_d',
+  IRON = 'iron',
+  VITAMIN_B = 'vitamin_b',
+  PROBIOTIC = 'probiotic',
 }
 
 export type BabyEvent = {

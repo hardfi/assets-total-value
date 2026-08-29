@@ -26,6 +26,8 @@ type BabyAction = {
   emoji: string;
   label: string;
   hasDuration?: boolean;
+  // Opens the supplement picker instead of logging straight away.
+  opensPicker?: boolean;
 };
 
 const ACTIONS: BabyAction[] = [
@@ -36,15 +38,33 @@ const ACTIONS: BabyAction[] = [
   { type: BabyEventType.POOP, emoji: '💩', label: 'Kupa' },
   { type: BabyEventType.PEE, emoji: '💧', label: 'Siku' },
   { type: BabyEventType.BATH, emoji: '🛁', label: 'Kąpiel' },
-  { type: BabyEventType.VITAMIN, emoji: '💊', label: 'Witamina D' },
+  { type: BabyEventType.VITAMIN, emoji: '💊', label: 'Suplementy', opensPicker: true },
 ];
+
+const SUPPLEMENTS: BabyAction[] = [
+  { type: BabyEventType.VITAMIN_D, emoji: '☀️', label: 'Witamina D3' },
+  { type: BabyEventType.IRON, emoji: '🩸', label: 'Żelazo' },
+  { type: BabyEventType.VITAMIN_B, emoji: '⚡', label: 'Witamina B' },
+  { type: BabyEventType.PROBIOTIC, emoji: '🦠', label: 'Probiotyk' },
+];
+
+// Anything logged under the old single pill button predates the picker.
+const LEGACY_VITAMIN: BabyAction = {
+  type: BabyEventType.VITAMIN,
+  emoji: '💊',
+  label: 'Witamina D',
+};
 
 const QUICK_AMOUNTS = [30, 60, 90, 120, 150, 180];
 
 // Logging usually happens a little after the fact, so offer a fast way back.
 const QUICK_SHIFTS = [5, 15, 30, 60];
 
-const ACTIONS_BY_TYPE = ACTIONS.reduce((map, action) => {
+const ACTIONS_BY_TYPE = [
+  ...ACTIONS.filter((action) => !action.opensPicker),
+  ...SUPPLEMENTS,
+  LEGACY_VITAMIN,
+].reduce((map, action) => {
   map[action.type] = action;
   return map;
 }, {} as Record<BabyEventType, BabyAction>);
@@ -69,6 +89,7 @@ export const BabyTracker = ({ theme }: Props) => {
   const [events, setEvents] = useState<BabyEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [pendingType, setPendingType] = useState<BabyEventType | null>(null);
+  const [showSupplements, setShowSupplements] = useState<boolean>(false);
   const [editEvent, setEditEvent] = useState<BabyEvent | null>(null);
   const [startValue, setStartValue] = useState<string>('');
   const [endValue, setEndValue] = useState<string>('');
@@ -221,7 +242,18 @@ export const BabyTracker = ({ theme }: Props) => {
       .catch((err) => console.log(err));
   };
 
+  const handleTileClick = (action: BabyAction) => {
+    if (action.opensPicker) {
+      setShowSupplements(true);
+      return;
+    }
+    handleAction(action);
+  };
+
   const getTileSubtitle = (action: BabyAction) => {
+    if (action.opensPicker) {
+      return '';
+    }
     const ongoing = ongoingByType[action.type];
     if (ongoing) {
       return formatDuration(now - getStart(ongoing));
@@ -264,7 +296,7 @@ export const BabyTracker = ({ theme }: Props) => {
               key={action.type}
               $active={ongoing}
               $pending={pendingType === action.type}
-              onClick={() => handleAction(action)}
+              onClick={() => handleTileClick(action)}
             >
               <Emoji>{action.emoji}</Emoji>
               <TileLabel>{action.label}</TileLabel>
@@ -334,6 +366,37 @@ export const BabyTracker = ({ theme }: Props) => {
       ) : (
         <Empty mt={5}>Jeszcze nic tu nie ma — kliknij ikonę powyżej 👆</Empty>
       )}
+
+      {showSupplements ? (
+        <Overlay onClick={() => setShowSupplements(false)}>
+          <Dialog onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <DialogTitle>💊 Co podaliśmy?</DialogTitle>
+            {SUPPLEMENTS.map((supplement) => {
+              const last = lastByType[supplement.type];
+              return (
+                <SupplementRow
+                  key={supplement.type}
+                  onClick={() => {
+                    setShowSupplements(false);
+                    handleAction(supplement);
+                  }}
+                >
+                  <Emoji>{supplement.emoji}</Emoji>
+                  <SupplementLabel>{supplement.label}</SupplementLabel>
+                  <SupplementAgo>
+                    {last ? `${formatDuration(now - getStart(last))} temu` : '—'}
+                  </SupplementAgo>
+                </SupplementRow>
+              );
+            })}
+            <Flex justifyContent="flex-end" mt={3}>
+              <Button style={{ backgroundColor: 'grey' }} onClick={() => setShowSupplements(false)}>
+                Anuluj
+              </Button>
+            </Flex>
+          </Dialog>
+        </Overlay>
+      ) : null}
 
       {editEvent ? (
         <Overlay onClick={closeEditDialog}>
@@ -531,6 +594,32 @@ const DialogTitle = styled.div`
   color: var(--gray-700);
   font-size: 18px;
   font-weight: 700;
+`;
+
+const SupplementRow = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  background-color: var(--color-main);
+  color: var(--color-text);
+`;
+
+const SupplementLabel = styled.div`
+  flex: 1;
+  margin-left: 10px;
+  font-weight: 600;
+  text-align: left;
+`;
+
+const SupplementAgo = styled.div`
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0.8;
 `;
 
 const FieldLabel = styled.div`
