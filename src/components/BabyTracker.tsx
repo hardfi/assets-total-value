@@ -4,7 +4,14 @@ import { Box, Flex } from 'rebass';
 
 import supabaseApi from '../api/supabaseApi';
 import { BabyEvent, BabyEventType } from '../api/typings';
-import { formatDayLabel, formatDuration, formatHour } from '../utils/functions';
+import {
+  formatDayLabel,
+  formatDuration,
+  formatHour,
+  fromDateTimeLocal,
+  shiftDateTimeLocal,
+  toDateTimeLocal,
+} from '../utils/functions';
 import { Button } from './common/Button';
 import { ItemName } from './common/ItemName';
 import { ListItem } from './common/ListItem';
@@ -34,6 +41,9 @@ const ACTIONS: BabyAction[] = [
 
 const QUICK_AMOUNTS = [30, 60, 90, 120, 150, 180];
 
+// Logging usually happens a little after the fact, so offer a fast way back.
+const QUICK_SHIFTS = [5, 15, 30, 60];
+
 const ACTIONS_BY_TYPE = ACTIONS.reduce((map, action) => {
   map[action.type] = action;
   return map;
@@ -59,7 +69,9 @@ export const BabyTracker = ({ theme }: Props) => {
   const [events, setEvents] = useState<BabyEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [pendingType, setPendingType] = useState<BabyEventType | null>(null);
-  const [amountEvent, setAmountEvent] = useState<BabyEvent | null>(null);
+  const [editEvent, setEditEvent] = useState<BabyEvent | null>(null);
+  const [startValue, setStartValue] = useState<string>('');
+  const [endValue, setEndValue] = useState<string>('');
   const [amountValue, setAmountValue] = useState<string>('');
   const [now, setNow] = useState<number>(Date.now());
 
@@ -151,32 +163,55 @@ export const BabyTracker = ({ theme }: Props) => {
         // A feed is logged once it is already over, so ask for the amount now.
         const inserted = res && res.data ? res.data[0] : undefined;
         if (action.type === BabyEventType.FEEDING && inserted) {
-          openAmountDialog(inserted);
+          openEditDialog(inserted);
         }
       })
       .catch((err) => console.log(err))
       .finally(() => setPendingType(null));
   };
 
-  const openAmountDialog = (event: BabyEvent) => {
-    setAmountEvent(event);
+  const openEditDialog = (event: BabyEvent) => {
+    setEditEvent(event);
+    setStartValue(toDateTimeLocal(event.started_at));
+    setEndValue(event.ended_at ? toDateTimeLocal(event.ended_at) : '');
     setAmountValue(event.amount_ml ? String(event.amount_ml) : '');
   };
 
-  const closeAmountDialog = () => {
-    setAmountEvent(null);
+  const closeEditDialog = () => {
+    setEditEvent(null);
+    setStartValue('');
+    setEndValue('');
     setAmountValue('');
   };
 
-  const saveAmount = () => {
-    if (!amountEvent) {
+  // Both are UTC ISO strings of equal shape, so a string compare is a time compare.
+  const editStartIso = fromDateTimeLocal(startValue);
+  const editEndIso = endValue ? fromDateTimeLocal(endValue) : null;
+  const editInvalid = !editStartIso || !!(editEndIso && editEndIso < editStartIso);
+
+  const saveEdit = () => {
+    if (!editEvent || editInvalid) {
       return;
     }
+    const startedAt = fromDateTimeLocal(startValue);
+    if (!startedAt) {
+      return;
+    }
+
+    const changes: Partial<BabyEvent> = { started_at: startedAt };
+    // Only events that already finished carry an end — never resurrect one.
+    if (editEvent.ended_at) {
+      changes.ended_at = fromDateTimeLocal(endValue) || editEvent.ended_at;
+    }
+    if (editEvent.type === BabyEventType.FEEDING) {
+      changes.amount_ml = amountValue ? +amountValue : null;
+    }
+
     supabaseApi
-      .setBabyEventAmount(amountEvent.uuid!, amountValue ? +amountValue : null)
+      .updateBabyEvent(editEvent.uuid!, changes)
       .then(() => getEvents())
       .catch((err) => console.log(err));
-    closeAmountDialog();
+    closeEditDialog();
   };
 
   const removeEvent = (uuid: string) => {
@@ -255,12 +290,11 @@ export const BabyTracker = ({ theme }: Props) => {
                 <EventRow
                   key={event.uuid}
                   $ongoing={ongoing}
-                  $clickable={isFeeding}
                   mb={1}
                   alignItems="center"
                   justifyContent="space-between"
                   padding="8px"
-                  onClick={isFeeding ? () => openAmountDialog(event) : undefined}
+                  onClick={() => openEditDialog(event)}
                 >
                   <Emoji>{action?.emoji || '❓'}</Emoji>
                   <Flex flexDirection="column" flex={1} ml={2}>
@@ -301,33 +335,80 @@ export const BabyTracker = ({ theme }: Props) => {
         <Empty mt={5}>Jeszcze nic tu nie ma — kliknij ikonę powyżej 👆</Empty>
       )}
 
-      {amountEvent ? (
-        <Overlay onClick={closeAmountDialog}>
+      {editEvent ? (
+        <Overlay onClick={closeEditDialog}>
           <Dialog onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-            <DialogTitle>🍼 Ile ml?</DialogTitle>
-            <Amounts>
-              {QUICK_AMOUNTS.map((amount) => (
-                <AmountButton
-                  key={amount}
-                  $selected={+amountValue === amount}
-                  onClick={() => setAmountValue(String(amount))}
-                >
-                  {amount}
-                </AmountButton>
-              ))}
-            </Amounts>
+            <DialogTitle>
+              {ACTIONS_BY_TYPE[editEvent.type]?.emoji} {ACTIONS_BY_TYPE[editEvent.type]?.label}
+            </DialogTitle>
+
+            <FieldLabel>{editEvent.ended_at ? 'Początek' : 'Kiedy?'}</FieldLabel>
             <InputText
-              value={amountValue}
-              type="number"
-              onChange={(e) => setAmountValue(e.target.value)}
-              placeholder="ml"
-              style={{ width: '100%', marginTop: '12px' }}
+              value={startValue}
+              type="datetime-local"
+              onChange={(e) => setStartValue(e.target.value)}
+              style={{ width: '100%' }}
             />
+            <Shifts>
+              {QUICK_SHIFTS.map((minutes) => (
+                <ShiftButton
+                  key={minutes}
+                  onClick={() => setStartValue(shiftDateTimeLocal(startValue, -minutes))}
+                >
+                  −{minutes} min
+                </ShiftButton>
+              ))}
+            </Shifts>
+
+            {editEvent.ended_at ? (
+              <>
+                <FieldLabel>Koniec</FieldLabel>
+                <InputText
+                  value={endValue}
+                  type="datetime-local"
+                  onChange={(e) => setEndValue(e.target.value)}
+                  style={{ width: '100%' }}
+                />
+              </>
+            ) : null}
+
+            {editEvent.type === BabyEventType.FEEDING ? (
+              <>
+                <FieldLabel>Ile ml?</FieldLabel>
+                <Amounts>
+                  {QUICK_AMOUNTS.map((amount) => (
+                    <AmountButton
+                      key={amount}
+                      $selected={+amountValue === amount}
+                      onClick={() => setAmountValue(String(amount))}
+                    >
+                      {amount}
+                    </AmountButton>
+                  ))}
+                </Amounts>
+                <InputText
+                  value={amountValue}
+                  type="number"
+                  onChange={(e) => setAmountValue(e.target.value)}
+                  placeholder="ml"
+                  style={{ width: '100%', marginTop: '8px' }}
+                />
+              </>
+            ) : null}
+
+            {editInvalid ? <Warning>Koniec nie może być przed początkiem</Warning> : null}
+
             <Flex justifyContent="space-between" mt={3}>
-              <Button style={{ backgroundColor: 'grey' }} onClick={closeAmountDialog}>
+              <Button style={{ backgroundColor: 'grey' }} onClick={closeEditDialog}>
                 Anuluj
               </Button>
-              <Button onClick={saveAmount}>Zapisz</Button>
+              <Button
+                onClick={saveEdit}
+                disabled={editInvalid}
+                style={{ opacity: editInvalid ? 0.5 : 1 }}
+              >
+                Zapisz
+              </Button>
             </Flex>
           </Dialog>
         </Overlay>
@@ -404,9 +485,9 @@ const DaySummary = styled.div`
   white-space: nowrap;
 `;
 
-const EventRow = styled(ListItem)<{ $ongoing?: boolean; $clickable?: boolean }>`
+const EventRow = styled(ListItem)<{ $ongoing?: boolean }>`
   border-left: 4px solid ${({ $ongoing }) => ($ongoing ? 'var(--color-deepmain)' : 'transparent')};
-  cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
+  cursor: pointer;
 `;
 
 const AddAmount = styled.div`
@@ -437,6 +518,8 @@ const Overlay = styled.div`
 const Dialog = styled.div`
   width: 100%;
   max-width: 320px;
+  max-height: 90vh;
+  overflow-y: auto;
   padding: 20px;
   border-radius: 12px;
   background-color: white;
@@ -448,6 +531,42 @@ const DialogTitle = styled.div`
   color: var(--gray-700);
   font-size: 18px;
   font-weight: 700;
+`;
+
+const FieldLabel = styled.div`
+  margin: 12px 0 6px;
+  color: var(--gray-700);
+  font-size: 13px;
+  font-weight: 600;
+`;
+
+const Shifts = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-gap: 6px;
+  margin-top: 8px;
+`;
+
+const ShiftButton = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  background-color: var(--color-main);
+  color: var(--color-text);
+`;
+
+const Warning = styled.div`
+  margin-top: 12px;
+  color: crimson;
+  font-size: 12px;
+  font-weight: 600;
 `;
 
 const Amounts = styled.div`

@@ -59,11 +59,11 @@ const supabaseApi = {
   async finishBabyEvent(uuid: string, endedAt: string): Promise<PostgrestResponse<BabyEvent>> {
     return supabase.from('baby_events').update({ ended_at: endedAt }).eq('uuid', uuid);
   },
-  async setBabyEventAmount(
+  async updateBabyEvent(
     uuid: string,
-    amountMl: number | null,
+    changes: Partial<BabyEvent>,
   ): Promise<PostgrestResponse<BabyEvent>> {
-    return supabase.from('baby_events').update({ amount_ml: amountMl }).eq('uuid', uuid);
+    return supabase.from('baby_events').update(changes).eq('uuid', uuid);
   },
   async removeBabyEvent(uuid: string): Promise<PostgrestResponse<BabyEvent>> {
     return supabase.from('baby_events').delete().eq('uuid', uuid);

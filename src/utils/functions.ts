@@ -57,3 +57,27 @@ export const formatDayLabel = (date: Date, countryCode = 'pl-PL'): string => {
     month: 'long',
   }).format(date);
 };
+
+// <input type="datetime-local"> speaks local wall-clock time with no zone,
+// which is exactly how a parent thinks about "when did this happen".
+export const toDateTimeLocal = (isoDate: string): string => {
+  const date = new Date(isoDate);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+};
+
+export const fromDateTimeLocal = (value: string): string | null => {
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? null : date.toISOString();
+};
+
+export const shiftDateTimeLocal = (value: string, minutes: number): string => {
+  const date = new Date(value);
+  if (isNaN(date.getTime())) {
+    return value;
+  }
+  return toDateTimeLocal(new Date(date.getTime() + minutes * 60000).toISOString());
+};
