@@ -40,10 +40,14 @@ export const formatDuration = (milliseconds: number): string => {
 export const formatHour = (date: Date, countryCode = 'pl-PL'): string =>
   new Intl.DateTimeFormat(countryCode, { hour: '2-digit', minute: '2-digit' }).format(date);
 
+const startOfDay = (value: Date) =>
+  new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+
+const calendarDaysAgo = (date: Date, from: Date) =>
+  Math.round((startOfDay(from) - startOfDay(date)) / 86400000);
+
 export const formatDayLabel = (date: Date, countryCode = 'pl-PL'): string => {
-  const startOfDay = (value: Date) =>
-    new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
-  const daysAgo = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000);
+  const daysAgo = calendarDaysAgo(date, new Date());
 
   if (daysAgo === 0) {
     return 'Dzisiaj';
@@ -80,4 +84,33 @@ export const shiftDateTimeLocal = (value: string, minutes: number): string => {
     return value;
   }
   return toDateTimeLocal(new Date(date.getTime() + minutes * 60000).toISOString());
+};
+
+// "77h 15min temu" is unreadable. Recent gaps stay precise because that is what
+// a feed interval needs; anything older falls back to whole days, matching the
+// Dzisiaj/Wczoraj headers in the history list.
+export const formatAgo = (isoDate: string, nowMs: number = Date.now()): string => {
+  const then = new Date(isoDate);
+  const minutes = Math.floor(Math.max(0, nowMs - then.getTime()) / 60000);
+
+  if (minutes < 1) {
+    return 'przed chwilą';
+  }
+  if (minutes < 60) {
+    return `${minutes}min temu`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 12) {
+    return `${hours}h ${minutes % 60}min temu`;
+  }
+
+  const daysAgo = calendarDaysAgo(then, new Date(nowMs));
+  if (daysAgo <= 0) {
+    return `${hours}h temu`;
+  }
+  if (daysAgo === 1) {
+    return 'wczoraj';
+  }
+  return `${daysAgo} dni temu`;
 };

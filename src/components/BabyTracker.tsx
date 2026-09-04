@@ -5,6 +5,7 @@ import { Box, Flex } from 'rebass';
 import supabaseApi from '../api/supabaseApi';
 import { BabyEvent, BabyEventType } from '../api/typings';
 import {
+  formatAgo,
   formatDayLabel,
   formatDuration,
   formatHour,
@@ -292,7 +293,7 @@ export const BabyTracker = ({ theme }: Props) => {
     if (!last) {
       return '—';
     }
-    return `${formatDuration(now - getEnd(last, getStart(last)))} temu`;
+    return formatAgo(last.ended_at || last.started_at, now);
   };
 
   const getDaySummary = (group: EventGroup) => {
@@ -428,7 +429,7 @@ export const BabyTracker = ({ theme }: Props) => {
                     {givenToday && last
                       ? `✓ dziś ${formatHour(new Date(last.started_at))}`
                       : last
-                      ? `${formatDuration(now - getStart(last))} temu`
+                      ? formatAgo(last.started_at, now)
                       : '—'}
                   </SupplementAgo>
                 </SupplementRow>
