@@ -89,8 +89,13 @@ const SUPPLEMENT_TYPES: BabyEventType[] = [
 const isSupplement = (type: BabyEventType) => SUPPLEMENT_TYPES.includes(type);
 const isToday = (isoDate: string) => new Date(isoDate).toDateString() === new Date().toDateString();
 
-const isOngoing = (event: BabyEvent) =>
-  !!ACTIONS_BY_TYPE[event.type]?.hasDuration && !event.ended_at;
+// A duration event is only "running now" when nothing has happened since it
+// started. Anything logged later means the sleep was entered in hindsight, so
+// it needs an end time rather than a live counter.
+const isOngoing = (event: BabyEvent, latestStart: number) =>
+  !!ACTIONS_BY_TYPE[event.type]?.hasDuration && !event.ended_at && getStart(event) >= latestStart;
+
+const hasDuration = (type: BabyEventType) => !!ACTIONS_BY_TYPE[type]?.hasDuration;
 
 export const BabyTracker = ({ theme }: Props) => {
   const [events, setEvents] = useState<BabyEvent[]>([]);
@@ -123,16 +128,19 @@ export const BabyTracker = ({ theme }: Props) => {
       .catch((err) => console.log(err))
       .finally(() => setLoading(false));
 
-  // events arrive sorted by started_at descending, so the first hit is always the latest one
+  // events arrive sorted by started_at descending, so the first row is the most
+  // recent thing that happened
+  const latestStart = events.length ? getStart(events[0]) : 0;
+
   const ongoingByType = useMemo(() => {
     const map: Partial<Record<BabyEventType, BabyEvent>> = {};
     events.forEach((event) => {
-      if (isOngoing(event) && !map[event.type]) {
+      if (isOngoing(event, latestStart) && !map[event.type]) {
         map[event.type] = event;
       }
     });
     return map;
-  }, [events]);
+  }, [events, latestStart]);
 
   const lastByType = useMemo(() => {
     const map: Partial<Record<BabyEventType, BabyEvent>> = {};
@@ -169,7 +177,7 @@ export const BabyTracker = ({ theme }: Props) => {
     // still be asleep once we log a poop. The new event starts at the same
     // instant the old one ends, so the history has no gap.
     const timestamp = new Date().toISOString();
-    const running = events.filter(isOngoing);
+    const running = events.filter((event) => isOngoing(event, latestStart));
     const stoppedItself = running.some((event) => event.type === action.type);
 
     const requests = running.map((event) =>
@@ -233,9 +241,13 @@ export const BabyTracker = ({ theme }: Props) => {
       }
       changes.started_at = startedAt;
     }
-    // Only events that already finished carry an end — never resurrect one.
-    if (editEvent.ended_at && endValue !== toDateTimeLocal(editEvent.ended_at)) {
-      changes.ended_at = fromDateTimeLocal(endValue) || editEvent.ended_at;
+    // A duration event can gain an end (logged in hindsight), have it moved, or
+    // have it cleared to hand the running state back.
+    if (hasDuration(editEvent.type)) {
+      const originalEnd = editEvent.ended_at ? toDateTimeLocal(editEvent.ended_at) : '';
+      if (endValue !== originalEnd) {
+        changes.ended_at = endValue ? fromDateTimeLocal(endValue) : null;
+      }
     }
     if (editEvent.type === BabyEventType.FEEDING) {
       changes.amount_ml = amountValue ? +amountValue : null;
@@ -286,7 +298,13 @@ export const BabyTracker = ({ theme }: Props) => {
   const getDaySummary = (group: EventGroup) => {
     const sleepMs = group.events
       .filter((event) => event.type === BabyEventType.SLEEP)
-      .reduce((total, event) => total + (getEnd(event, now) - getStart(event)), 0);
+      .reduce((total, event) => {
+        if (event.ended_at) {
+          return total + (new Date(event.ended_at).getTime() - getStart(event));
+        }
+        // Still running counts up to now; an unfinished hindsight entry does not.
+        return isOngoing(event, latestStart) ? total + (now - getStart(event)) : total;
+      }, 0);
     const feedings = group.events.filter((event) => event.type === BabyEventType.FEEDING).length;
     const poops = group.events.filter((event) => event.type === BabyEventType.POOP).length;
     const milkMl = group.events.reduce((total, event) => total + (event.amount_ml || 0), 0);
@@ -334,7 +352,8 @@ export const BabyTracker = ({ theme }: Props) => {
             </DayHeader>
             {group.events.map((event) => {
               const action = ACTIONS_BY_TYPE[event.type];
-              const ongoing = isOngoing(event);
+              const ongoing = isOngoing(event, latestStart);
+              const needsEnd = hasDuration(event.type) && !event.ended_at && !ongoing;
               const isFeeding = event.type === BabyEventType.FEEDING;
               return (
                 <EventRow
@@ -355,13 +374,14 @@ export const BabyTracker = ({ theme }: Props) => {
                       {event.ended_at ? ` – ${formatHour(new Date(event.ended_at))}` : ''}
                     </Hours>
                   </Flex>
-                  {action?.hasDuration ? (
+                  {action?.hasDuration && !needsEnd ? (
                     <ItemName theme={theme} mr={2} style={{ whiteSpace: 'nowrap' }}>
                       {ongoing
                         ? `⏱ ${formatDuration(now - getStart(event))}`
                         : formatDuration(getEnd(event, now) - getStart(event))}
                     </ItemName>
                   ) : null}
+                  {needsEnd ? <AddAmount>+ koniec</AddAmount> : null}
                   {isFeeding && event.amount_ml ? (
                     <ItemName theme={theme} mr={2} style={{ whiteSpace: 'nowrap' }}>
                       {event.amount_ml} ml
@@ -430,7 +450,7 @@ export const BabyTracker = ({ theme }: Props) => {
               {ACTIONS_BY_TYPE[editEvent.type]?.emoji} {ACTIONS_BY_TYPE[editEvent.type]?.label}
             </DialogTitle>
 
-            <FieldLabel>{editEvent.ended_at ? 'Początek' : 'Kiedy?'}</FieldLabel>
+            <FieldLabel>{hasDuration(editEvent.type) ? 'Początek' : 'Kiedy?'}</FieldLabel>
             <InputText
               value={startValue}
               type="datetime-local"
@@ -448,7 +468,7 @@ export const BabyTracker = ({ theme }: Props) => {
               ))}
             </Shifts>
 
-            {editEvent.ended_at ? (
+            {hasDuration(editEvent.type) ? (
               <>
                 <FieldLabel>Koniec</FieldLabel>
                 <InputText
@@ -457,6 +477,7 @@ export const BabyTracker = ({ theme }: Props) => {
                   onChange={(e) => setEndValue(e.target.value)}
                   style={{ width: '100%' }}
                 />
+                <FieldHint>Puste = trwa teraz</FieldHint>
               </>
             ) : null}
 
@@ -656,6 +677,13 @@ const SupplementAgo = styled.div<{ $done?: boolean }>`
   white-space: nowrap;
   color: ${({ $done }) => ($done ? 'var(--color-supplement-deep)' : 'inherit')};
   opacity: ${({ $done }) => ($done ? 1 : 0.8)};
+`;
+
+const FieldHint = styled.div`
+  margin-top: 4px;
+  color: var(--gray-700);
+  font-size: 11px;
+  opacity: 0.7;
 `;
 
 const FieldLabel = styled.div`
