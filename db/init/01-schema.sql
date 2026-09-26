@@ -106,8 +106,9 @@ create table if not exists public.liabilities (
 --  5. baby_events  — the 👶 tab
 -- ---------------------------------------------------------------------
 --  type: sleep | feeding | poop | pee | bath
---        | vitamin_d | iron | vitamin_b | probiotic
---        | vitamin  (legacy: the single pill button, before the picker)
+--        | vitamin_d | iron | vitamin_b | dicogel | espumisan
+--        | vitamin    (retired: the single pill button, before the picker)
+--        | probiotic  (retired: removed from the picker)
 --  Deliberately no CHECK constraint, so adding a supplement stays a
 --  front-end-only change.
 --  ended_at NULL means "instant event" for poop/pee/bath/vitamin, and

@@ -32,7 +32,10 @@ export enum BabyEventType {
   VITAMIN_D = 'vitamin_d',
   IRON = 'iron',
   VITAMIN_B = 'vitamin_b',
+  // Retired from the picker, kept so earlier rows still render.
   PROBIOTIC = 'probiotic',
+  DICOGEL = 'dicogel',
+  ESPUMISAN = 'espumisan',
 }
 
 export type BabyEvent = {

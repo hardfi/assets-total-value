@@ -46,15 +46,17 @@ const SUPPLEMENTS: BabyAction[] = [
   { type: BabyEventType.VITAMIN_D, emoji: '☀️', label: 'Witamina D3' },
   { type: BabyEventType.IRON, emoji: '🩸', label: 'Żelazo' },
   { type: BabyEventType.VITAMIN_B, emoji: '⚡', label: 'Witamina B' },
-  { type: BabyEventType.PROBIOTIC, emoji: '🦠', label: 'Probiotyk' },
+  { type: BabyEventType.DICOGEL, emoji: '🧪', label: 'Dicogel' },
+  { type: BabyEventType.ESPUMISAN, emoji: '🫧', label: 'Espumisan' },
 ];
 
-// Anything logged under the old single pill button predates the picker.
-const LEGACY_VITAMIN: BabyAction = {
-  type: BabyEventType.VITAMIN,
-  emoji: '💊',
-  label: 'Witamina D',
-};
+// No longer offered in the picker, but rows already logged under these types
+// still need a label, an emoji and the supplement highlight in the history.
+const RETIRED_SUPPLEMENTS: BabyAction[] = [
+  // the old single pill button, before the picker existed
+  { type: BabyEventType.VITAMIN, emoji: '💊', label: 'Witamina D' },
+  { type: BabyEventType.PROBIOTIC, emoji: '🦠', label: 'Probiotyk' },
+];
 
 const QUICK_AMOUNTS = [30, 60, 90, 120, 150, 180];
 
@@ -64,7 +66,7 @@ const QUICK_SHIFTS = [5, 15, 30, 60];
 const ACTIONS_BY_TYPE = [
   ...ACTIONS.filter((action) => !action.opensPicker),
   ...SUPPLEMENTS,
-  LEGACY_VITAMIN,
+  ...RETIRED_SUPPLEMENTS,
 ].reduce((map, action) => {
   map[action.type] = action;
   return map;
@@ -85,7 +87,7 @@ const getEnd = (event: BabyEvent, fallback: number) =>
   event.ended_at ? new Date(event.ended_at).getTime() : fallback;
 const SUPPLEMENT_TYPES: BabyEventType[] = [
   ...SUPPLEMENTS.map((supplement) => supplement.type),
-  LEGACY_VITAMIN.type,
+  ...RETIRED_SUPPLEMENTS.map((supplement) => supplement.type),
 ];
 const isSupplement = (type: BabyEventType) => SUPPLEMENT_TYPES.includes(type);
 const isToday = (isoDate: string) => new Date(isoDate).toDateString() === new Date().toDateString();
